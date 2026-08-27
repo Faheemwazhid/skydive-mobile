@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 
 import { AgentsProvider } from '@/src/agents/AgentsProvider';
 import { ChatProvider } from '@/src/chat/ChatProvider';
+import { PhoneFrame } from '@/src/components/PhoneFrame';
 import { Gate } from '@/src/session/Gate';
 import { SessionProvider } from '@/src/session/SessionProvider';
 import { color } from '@/src/theme/tokens';
@@ -43,17 +44,19 @@ export default function RootLayout() {
       <AgentsProvider>
         <ChatProvider>
           <StatusBar style="dark" />
-          <Gate>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: color.offWhite },
-              }}
-            >
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(tabs)" />
-            </Stack>
-          </Gate>
+          <PhoneFrame>
+            <Gate>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: color.offWhite },
+                }}
+              >
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(tabs)" />
+              </Stack>
+            </Gate>
+          </PhoneFrame>
         </ChatProvider>
       </AgentsProvider>
     </SessionProvider>

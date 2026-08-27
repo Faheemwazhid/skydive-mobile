@@ -38,14 +38,13 @@ export default function TabsLayout() {
         tabBarItemStyle: {
           paddingTop: 8,
         },
-        tabBarStyle: hideTabBar
-          ? { display: 'none' }
-          : {
-              backgroundColor: color.white,
-              borderTopColor: color.greyLight,
-              height: Platform.OS === 'web' ? 72 : 56,
-              paddingBottom: Platform.OS === 'web' ? 8 : 4,
-            },
+        tabBarStyle: {
+          backgroundColor: color.white,
+          borderTopColor: color.greyLight,
+          height: Platform.OS === 'web' ? 72 : 56,
+          paddingBottom: Platform.OS === 'web' ? 8 : 4,
+          display: hideTabBar ? 'none' : undefined,
+        },
       }}
     >
       <Tabs.Screen
