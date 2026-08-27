@@ -10,7 +10,7 @@ import { color, font } from '@/src/theme/tokens';
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
 const ICONS: Record<string, { on: IoniconName; off: IoniconName }> = {
-  team: { on: 'people', off: 'people-outline' },
+  agents: { on: 'people', off: 'people-outline' },
   chats: { on: 'chatbubble', off: 'chatbubble-outline' },
   templates: { on: 'grid', off: 'grid-outline' },
   you: { on: 'person-circle', off: 'person-circle-outline' },
@@ -70,8 +70,8 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="team"
-        options={{ title: 'Team', tabBarIcon: icon('team') }}
+        name="agents"
+        options={{ title: 'Agents', tabBarIcon: icon('agents') }}
       />
       <Tabs.Screen
         name="chats"

@@ -11,7 +11,7 @@ export default function TemplatesTab() {
     <Screen padded={false} hasHeader>
       <RootHeader
         title="Templates"
-        subtitle="Add an expert to your team"
+        subtitle="Add an expert to your workspace"
       />
       <ScrollView contentContainerStyle={styles.scroll}>
         {templates.map((template) => (

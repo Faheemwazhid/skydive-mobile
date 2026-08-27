@@ -101,16 +101,20 @@ This is not in public OpenAPI. Treat unknown fields as additive.
 |---|---|
 | `(auth)/login` | email + continue |
 | `(auth)/connect` | paste key or Skip |
-| `(tabs)/team` | roster + feed |
+| `(tabs)/agents` | roster + feed |
+| `(tabs)/agents/[id]` | agent profile |
+| `(tabs)/agents/create` | create sheet |
 | `(tabs)/chats` | conversation list |
+| `(tabs)/chats/[id]` | thread (`new`/`tnew` = draft) |
+| `(tabs)/chats/new` | agent picker |
 | `(tabs)/templates` | catalog |
+| `(tabs)/templates/[id]` | template detail |
 | `(tabs)/you` | account |
-| `agent/[id]` | profile |
-| `chat/[id]` | thread |
-| `templates/[id]` | detail |
-| `create-agent` | sheet |
 
-New chat: pick-agent sheet → empty thread. Team / profile Message opens latest thread for that agent, or creates one.
+Detail screens are nested inside their tab's stack so the bottom nav stays
+visible. Every pushed screen has a back control.
+
+New chat: pick-agent sheet → empty thread. Agents / profile Message opens latest thread for that agent, or creates one.
 
 ## Frontend vs BFF
 

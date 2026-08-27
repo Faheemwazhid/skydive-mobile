@@ -10,7 +10,7 @@ export type FeedItem = {
 
 export function feedCopy(item: FeedItem): string {
   if (item.kind === 'joined') {
-    return `${item.agentName} joined your team`;
+    return `${item.agentName} joined your workspace`;
   }
   if (item.kind === 'new_chat') {
     return `${item.agentName} started a chat`;

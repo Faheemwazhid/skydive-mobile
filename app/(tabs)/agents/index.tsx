@@ -18,7 +18,7 @@ import { useSession, useSessionActions } from '@/src/session/SessionProvider';
 import { go } from '@/src/nav';
 import { color, radius, space } from '@/src/theme/tokens';
 
-export default function TeamTab() {
+export default function AgentsTab() {
   const session = useSession();
   const { beginConnect } = useSessionActions();
   const repo = useAgentsRepo();
@@ -58,12 +58,12 @@ export default function TeamTab() {
   return (
     <Screen padded={false} hasHeader>
       <RootHeader
-        title="Team"
+        title="Agents"
         action={
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Create a new agent"
-            onPress={() => go('/team/create')}
+            onPress={() => go('/agents/create')}
             style={styles.headerAction}
           >
             <Ionicons name="add" size={24} color={color.greyDark} />
@@ -76,7 +76,7 @@ export default function TeamTab() {
             <Pressable
               key={agent.id}
               accessibilityRole="button"
-              onPress={() => go(`/team/${agent.id}`)}
+              onPress={() => go(`/agents/${agent.id}`)}
               style={styles.row}
             >
               <Avatar characterId={agent.characterId} size="md" />
