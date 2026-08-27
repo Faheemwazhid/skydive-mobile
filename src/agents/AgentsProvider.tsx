@@ -5,7 +5,7 @@ import {
 } from 'react';
 
 import type { AgentsRepo } from '@/src/domain/agent';
-import { agentsRepo as defaultRepo } from '@/src/agents/mockAgentsRepo';
+import { httpAgentsRepo as defaultRepo } from '@/src/agents/httpAgentsRepo';
 
 const Ctx = createContext<AgentsRepo | null>(null);
 

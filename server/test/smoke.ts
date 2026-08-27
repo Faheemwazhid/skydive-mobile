@@ -113,6 +113,50 @@ async function main() {
     check('disconnect clears the workspace', disconnected.status === 200);
   }
 
+
+  if (!REAL_KEY) {
+    console.log('skip  agents — no skydive_api_key in env');
+  } else {
+    const reconnect = await call(
+      '/v1/auth/connect',
+      { method: 'POST', body: JSON.stringify({ key: REAL_KEY }) },
+      token,
+    );
+    check('reconnect for agent checks', reconnect.status === 201);
+
+    const list = await call('/v1/agents', {}, token);
+    const agents = (list.body.agents ?? []) as Array<Record<string, unknown>>;
+    check('lists live agents', list.status === 200 && agents.length > 0,
+      `${agents.length} agent(s)`);
+
+    const first = agents[0] ?? {};
+    check('every agent has a character',
+      agents.every((a) => typeof a.characterId === 'string' && a.characterId.length > 0));
+    check('agent keeps its real model',
+      typeof first.model === 'string' && (first.model as string).length > 0,
+      String(first.model ?? ''));
+    check('no key leaks into the agent payload',
+      !JSON.stringify(agents).includes('sky_live_'));
+
+    const one = await call(`/v1/agents/${String(first.id)}`, {}, token);
+    check('fetches a single agent',
+      one.status === 200 &&
+      (one.body.agent as Record<string, unknown>).id === first.id);
+
+    const malformed = await call('/v1/agents/does-not-exist', {}, token);
+    check('malformed agent id is 404, not a passed-through 500',
+      malformed.status === 404, String(malformed.body.code ?? ''));
+
+    const missing = await call(
+      '/v1/agents/01a04269-0000-0000-0000-000000000000', {}, token);
+    check('unknown agent is 404', missing.status === 404);
+
+    await call('/v1/auth/disconnect', { method: 'POST' }, token);
+    const gated = await call('/v1/agents', {}, token);
+    check('agents require a connected workspace', gated.status === 409,
+      String(gated.body.code ?? ''));
+  }
+
   const loggedOut = await call('/v1/auth/logout', { method: 'POST' }, token);
   check('logout succeeds', loggedOut.status === 200);
 

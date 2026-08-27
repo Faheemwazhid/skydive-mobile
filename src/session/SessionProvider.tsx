@@ -7,7 +7,7 @@ import {
 } from 'react';
 
 import type { Session, SessionStore } from '@/src/domain/session';
-import { sessionStore as defaultStore } from '@/src/session/mockSessionStore';
+import { httpSessionStore as defaultStore } from '@/src/session/httpSessionStore';
 
 const StoreContext = createContext<SessionStore | null>(null);
 
