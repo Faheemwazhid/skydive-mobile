@@ -159,6 +159,7 @@ async function main() {
     const badConvo = await call('/v1/chat/conversations/nope/messages', {}, token);
     check('malformed conversation id is 404', badConvo.status === 404);
 
+    const startedAt = Date.now();
     const sent = await call('/v1/chat/send', {
       method: 'POST',
       body: JSON.stringify({
@@ -166,8 +167,27 @@ async function main() {
         prompt: 'Reply with exactly: smoke-ok',
       }),
     }, token);
-    const reply = String((sent.body as Record<string, unknown>).reply ?? '');
-    check('sends and receives a real reply', sent.status === 200 && reply.length > 0,
+    const sendMs = Date.now() - startedAt;
+    const convoId = String((sent.body as Record<string, unknown>).conversationId ?? '');
+    check('send returns immediately', sent.status === 200 && sendMs < 3000,
+      `${sendMs}ms`);
+    check('send does not block on the reply',
+      !Object.prototype.hasOwnProperty.call(sent.body, 'reply'));
+
+    let reply = '';
+    let settled = false;
+    for (let attempt = 0; attempt < 30 && !settled; attempt += 1) {
+      await new Promise((r) => setTimeout(r, 1200));
+      const poll = await call(
+        `/v1/chat/conversations/${convoId}/messages`, {}, token);
+      const msgs = (poll.body.messages ?? []) as Array<Record<string, unknown>>;
+      const last = msgs[msgs.length - 1];
+      if (last && last.role !== 'user' && last.status !== 'pending') {
+        reply = String(last.body ?? '');
+        settled = true;
+      }
+    }
+    check('reply arrives via polling and settles', settled && reply.length > 0,
       reply.slice(0, 40));
 
     await call('/v1/auth/disconnect', { method: 'POST' }, token);

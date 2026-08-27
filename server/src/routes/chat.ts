@@ -2,10 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 
 import { requireSession, workspaceKey, type AppEnv } from '../session.ts';
-import { APP_BASE, skydiveFetch, skydiveJson } from '../skydive.ts';
-
-/** A run can take a while; give it longer than a normal request. */
-const RUN_TIMEOUT_MS = 120_000;
+import { APP_BASE, skydiveJson } from '../skydive.ts';
 
 const conversation = z
   .object({
@@ -21,13 +18,16 @@ const conversationList = z
   .object({ conversations: z.array(conversation) })
   .passthrough();
 
-/** Skydive messages are AI-SDK UIMessages: content lives in `parts`. */
+/** Skydive messages are AI-SDK UIMessages: text lives in `parts`. */
 const message = z
   .object({
     id: z.string(),
     role: z.string(),
+    status: z.string().nullish(),
     parts: z
-      .array(z.object({ type: z.string(), text: z.string().nullish() }).passthrough())
+      .array(
+        z.object({ type: z.string(), text: z.string().nullish() }).passthrough(),
+      )
       .nullish(),
   })
   .passthrough();
@@ -51,7 +51,22 @@ const sendBody = z.object({
 const CONVERSATION_ID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function bodyOf(parts: { type: string; text?: string | null }[] | null | undefined): string {
+type MessageStatus = 'pending' | 'sent' | 'failed';
+
+/**
+ * Skydive reports `streaming` while a reply is being written and `complete`
+ * when it lands. That maps onto our existing pending/sent states, which is how
+ * the client knows when to stop polling.
+ */
+function statusOf(raw: string | null | undefined): MessageStatus {
+  if (raw === 'streaming' || raw === 'pending') return 'pending';
+  if (raw === 'failed' || raw === 'error') return 'failed';
+  return 'sent';
+}
+
+function bodyOf(
+  parts: { type: string; text?: string | null }[] | null | undefined,
+): string {
   if (!parts) return '';
   return parts
     .filter((p) => p.type === 'text' && typeof p.text === 'string')
@@ -63,71 +78,6 @@ function bodyOf(parts: { type: string; text?: string | null }[] | null | undefin
 /** Skydive says `assistant`; our domain says `agent`. */
 function roleOf(role: string): 'user' | 'agent' {
   return role === 'user' ? 'user' : 'agent';
-}
-
-/**
- * Reads a run's SSE stream to completion and returns the assembled text.
- * Chunk shapes confirmed against the live API: text arrives as `text-delta`
- * frames wrapped in `{ kind: 'chunk', chunk: {...} }`, terminated by
- * `{ kind: 'finished' }`.
- */
-async function collectRun(runId: string, key: string): Promise<string> {
-  const res = await skydiveFetch(
-    `${APP_BASE}/chat/runs/${encodeURIComponent(runId)}/stream`,
-    key,
-    { headers: { accept: 'text/event-stream' } },
-  );
-  if (!res.body) return '';
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  const deadline = Date.now() + RUN_TIMEOUT_MS;
-  let buffer = '';
-  let reply = '';
-
-  while (Date.now() < deadline) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    const frames = buffer.split('\n\n');
-    buffer = frames.pop() ?? '';
-    for (const frame of frames) {
-      const event = parseFrame(frame);
-      if (!event) continue;
-      if (event.kind === 'finished') {
-        await reader.cancel().catch(() => undefined);
-        return reply;
-      }
-      reply += event.delta;
-    }
-  }
-  await reader.cancel().catch(() => undefined);
-  return reply;
-}
-
-type Frame = { kind: 'chunk'; delta: string } | { kind: 'finished' };
-
-function parseFrame(frame: string): Frame | null {
-  const data = frame
-    .split('\n')
-    .filter((line) => line.startsWith('data:'))
-    .map((line) => line.slice(5).trim())
-    .join('');
-  if (!data) return null;
-
-  let event: unknown;
-  try {
-    event = JSON.parse(data);
-  } catch {
-    return null;
-  }
-  const record = event as { kind?: string; chunk?: { type?: string; delta?: unknown } };
-  if (record.kind === 'finished') return { kind: 'finished' };
-  if (record.chunk?.type === 'text-delta' && typeof record.chunk.delta === 'string') {
-    return { kind: 'chunk', delta: record.chunk.delta };
-  }
-  return null;
 }
 
 export const chatRoutes = new Hono<AppEnv>();
@@ -179,22 +129,27 @@ chatRoutes.get('/conversations/:id/messages', async (c) => {
     return c.json({ error: 'unexpected response from Skydive' }, 502);
   }
 
+  const messages = parsed.data.messages.map((m) => ({
+    id: m.id,
+    conversationId: id,
+    role: roleOf(m.role),
+    body: bodyOf(m.parts),
+    status: statusOf(m.status),
+  }));
+
   return c.json({
-    messages: parsed.data.messages
-      .map((m) => ({
-        id: m.id,
-        conversationId: id,
-        role: roleOf(m.role),
-        body: bodyOf(m.parts),
-        status: 'sent' as const,
-      }))
-      .filter((m) => m.body.length > 0),
+    // An empty message that is still streaming must survive: dropping it would
+    // tell the client the thread had settled and stop it polling.
+    messages: messages.filter((m) => m.body.length > 0 || m.status === 'pending'),
   });
 });
 
 /**
- * Sends and waits for the reply. The app's ChatPort is request/response, so
- * the BFF absorbs the run here rather than the client holding a stream open.
+ * Starts the run and returns. The reply is not waited for — the client polls
+ * the messages endpoint until nothing is `pending`.
+ *
+ * Waiting here would tie request duration to how long an agent thinks, which
+ * a serverless platform will cut off mid-run.
  */
 chatRoutes.post('/send', async (c) => {
   const parsed = sendBody.safeParse(await c.req.json().catch(() => null));
@@ -219,11 +174,8 @@ chatRoutes.post('/send', async (c) => {
     return c.json({ error: 'unexpected response from Skydive' }, 502);
   }
 
-  const reply = await collectRun(sent.data.runId, key);
-
   return c.json({
     conversationId: sent.data.conversationId,
     messageId: sent.data.messageId ?? sent.data.runId,
-    reply,
   });
 });

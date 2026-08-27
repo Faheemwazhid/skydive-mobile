@@ -19,9 +19,14 @@ export type Message = {
 export type ChatPort = {
   listConversations(): Promise<Conversation[]>;
   listMessages(conversationId: string): Promise<Message[]>;
+  /**
+   * Starts the agent's run and returns as soon as it is accepted. The reply is
+   * not part of the result: callers poll `listMessages` until no message is
+   * `pending`. An agent can think for longer than any request should live.
+   */
   send(input: {
     agentId: string;
     conversationId?: string;
     prompt: string;
-  }): Promise<{ conversationId: string; messageId: string; reply: string }>;
+  }): Promise<{ conversationId: string; messageId: string }>;
 };
