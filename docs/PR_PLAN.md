@@ -19,6 +19,8 @@ One concern per PR. Merge to `main` before starting the next unless a PR is bloc
 | 11 | `feat/you-tab` | Email, appearance, logout | Basic H only |
 | 12 | `feat/bff-chat` | Later. Hono BFF, key vault, live list + `chat/send` | Same screens, live data |
 
+PRs 1–11 are the frontend MVP. PR 12 is the first backend slice and is not started.
+
 PRs 6–11 may ship as smaller follow-ups if a tab gets large. Do not combine templates with create-agent (two entry points, one `create`).
 
 ## Rules

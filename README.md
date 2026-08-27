@@ -11,7 +11,7 @@ Built as small pull requests. Start here:
 
 ## Status
 
-Architecture is on `main`. App bootstrap (`feat/bootstrap-expo`) adds Expo Router, Inter, and brand tokens. Tabs and screens follow in later PRs.
+Frontend MVP is on `main` (PRs 1–11). Data is mocked. Live Skydive chat and roster are PR 12 (`feat/bff-chat`), not started.
 
 ```bash
 npm install
