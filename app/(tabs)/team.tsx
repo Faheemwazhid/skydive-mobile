@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
@@ -22,7 +22,7 @@ export default function TeamTab() {
   const router = useRouter();
   const [agents, setAgents] = useState<Agent[]>([]);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (!session.connected) {
       setAgents([]);
       return;
@@ -35,6 +35,8 @@ export default function TeamTab() {
       cancelled = true;
     };
   }, [repo, session.connected]);
+
+  useFocusEffect(load);
 
   if (!session.connected) {
     return (
@@ -54,7 +56,15 @@ export default function TeamTab() {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <AppText variant="title">Team</AppText>
+        <View style={styles.header}>
+          <AppText variant="title">Team</AppText>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/create-agent')}
+          >
+            <AppText variant="body">New</AppText>
+          </Pressable>
+        </View>
         <View style={styles.list}>
           {agents.map((agent) => (
             <Pressable
@@ -96,6 +106,11 @@ function FeedRow({ item }: { item: FeedItem }) {
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   scroll: {
     paddingHorizontal: space.lg,
     paddingTop: space.md,
