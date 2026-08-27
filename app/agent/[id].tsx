@@ -1,0 +1,134 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { useAgentsRepo } from '@/src/agents/AgentsProvider';
+import { useChatPort } from '@/src/chat/ChatProvider';
+import { latestConversationForAgent } from '@/src/chat/latestConversation';
+import { AppText, Avatar, Button, Screen } from '@/src/components';
+import type { Agent } from '@/src/domain/agent';
+import type { Conversation } from '@/src/domain/chat';
+import { color, space } from '@/src/theme/tokens';
+
+export default function AgentProfileScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const agents = useAgentsRepo();
+  const chat = useChatPort();
+  const router = useRouter();
+  const [agent, setAgent] = useState<Agent | null>(null);
+  const [chats, setChats] = useState<Conversation[]>([]);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      const found = await agents.get(id);
+      const convos = await chat.listConversations();
+      if (cancelled) return;
+      setAgent(found);
+      setChats(convos.filter((c) => c.agentId === id));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [agents, chat, id]);
+
+  async function onMessage() {
+    if (!agent) return;
+    const latest = await latestConversationForAgent(chat, agent.id);
+    if (latest) {
+      router.push(`/chat/${latest.id}`);
+      return;
+    }
+    router.push({ pathname: '/chat/[id]', params: { id: 'new', agentId: agent.id } });
+  }
+
+  if (!agent) {
+    return (
+      <Screen>
+        <AppText variant="body" tone="muted">
+          Agent not found.
+        </AppText>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen padded={false}>
+      <ScrollView>
+        <Image
+          source={require('../../assets/world/cover.jpg')}
+          style={styles.cover}
+        />
+        <View style={styles.body}>
+          <View style={styles.avatarWrap}>
+            <Avatar characterId={agent.characterId} size="lg" />
+          </View>
+          <AppText variant="title">{agent.name}</AppText>
+          {agent.description ? (
+            <AppText variant="body" tone="muted" style={styles.desc}>
+              {agent.description}
+            </AppText>
+          ) : null}
+          <AppText variant="caption" tone="muted" style={styles.model}>
+            {agent.model}
+          </AppText>
+          <Button label="Message" onPress={onMessage} style={styles.message} />
+          <AppText variant="caption" tone="muted" style={styles.chatsLabel}>
+            Chats
+          </AppText>
+          {chats.length === 0 ? (
+            <AppText variant="body" tone="muted">
+              No chats yet.
+            </AppText>
+          ) : (
+            chats.map((convo) => (
+              <Pressable
+                key={convo.id}
+                accessibilityRole="button"
+                onPress={() => router.push(`/chat/${convo.id}`)}
+                style={styles.chatRow}
+              >
+                <AppText variant="body">{convo.title}</AppText>
+              </Pressable>
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  cover: {
+    width: '100%',
+    height: 160,
+  },
+  body: {
+    paddingHorizontal: space.lg,
+    paddingBottom: space.xl,
+    marginTop: -28,
+  },
+  avatarWrap: {
+    marginBottom: space.md,
+  },
+  desc: {
+    marginTop: space.sm,
+  },
+  model: {
+    marginTop: space.sm,
+  },
+  message: {
+    marginTop: space.lg,
+  },
+  chatsLabel: {
+    marginTop: space.lg,
+    marginBottom: space.sm,
+  },
+  chatRow: {
+    backgroundColor: color.white,
+    padding: space.md,
+    borderRadius: 16,
+    marginBottom: space.sm,
+  },
+});
