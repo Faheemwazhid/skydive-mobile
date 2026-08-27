@@ -25,7 +25,7 @@ export default function ConnectScreen() {
         <AppText variant="display">Connect Skydive</AppText>
         <AppText variant="body" tone="muted" style={styles.lede}>
           Paste an account-level API key. It is not stored on this device. Skip
-          to browse empty Team and Chats.
+          to browse empty Agents and Chats.
         </AppText>
       </View>
       <TextInput

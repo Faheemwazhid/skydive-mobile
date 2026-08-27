@@ -54,7 +54,7 @@ export default function ChatsTab() {
       <Screen>
         <EmptyState
           title="No chats yet"
-          body="Connect Skydive from Team to talk to your agents."
+          body="Connect Skydive from Agents to start a conversation."
         />
       </Screen>
     );

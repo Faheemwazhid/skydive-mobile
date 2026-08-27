@@ -8,7 +8,7 @@ A phone client that feels like Skydive: after login, paste a `sky_live_` key, se
 
 ## Hero loop (60 seconds)
 
-Login → Connect key → Team → Message → thread.
+Login → Connect key → Agents → Message → thread.
 
 ## Stack
 
@@ -16,14 +16,14 @@ Expo + React Native, iOS + Android. Frontend first (typed mock repo in real API 
 
 ## Tabs
 
-Team · Chats · Templates · You.
+Agents · Chats · Templates · You.
 
 Profile and create-agent are pushes / sheets, not tabs.
 
 ## In
 
 - Chat list + thread (markdown, composer)
-- Team roster + activity feed under it
+- Agents roster + activity feed under it
 - Create agent (seven brand characters, name, purpose)
 - Agent profile: dusk cover, avatar, role, Message, recent chats, model as a one-liner
 - Templates catalog + detail + Add to team
@@ -48,7 +48,7 @@ This phase: fixtures in API shape. Next: BFF stores the key, `GET /v1/agents` re
 
 ## Two UI states
 
-**No key.** Empty Team / Chats / feed + Connect CTA. Templates and You still work.
+**No key.** Empty Agents / Chats / feed + Connect CTA. Templates and You still work.
 
 **Connected.** Roster from agents. Feed cards are joined / new chat / replied only (no file-share or skill-install cards).
 
@@ -73,7 +73,7 @@ Seven brand characters, Name, Purpose, Get started. Template shortcuts jump to T
 
 - List: search, New.
 - New → pick agent → empty thread.
-- Team row / profile Message → latest thread with that agent, or create one.
+- Agents row / profile Message → latest thread with that agent, or create one.
 - Thread: header, markdown bubbles, composer (text + stub attach + send).
 - Frontend phase: fixture thread + delayed canned agent reply.
 - Later: `POST https://www.skydive.com/api/v1/chat/send` then SSE on `/api/v1/chat/runs/{runId}/stream`. Same `sky_live_` key as management. Not `https://<agent-id>.skydive.app`.

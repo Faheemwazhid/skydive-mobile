@@ -57,7 +57,7 @@ export const templates: Template[] = [
     id: 'support',
     name: 'Customer Service',
     characterId: 'sky',
-    blurb: 'Answers with the same memory the rest of the team has.',
+    blurb: 'Answers with the same memory the rest of your agents have.',
     worksWith: ['Gmail', 'Slack'],
     whatYouGet: ['Draft replies', 'Escalation notes'],
   },

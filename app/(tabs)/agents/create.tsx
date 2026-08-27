@@ -33,7 +33,7 @@ export default function CreateAgentScreen() {
     setError(null);
     try {
       const agent = await repo.create({ name, purpose, characterId });
-      swap(`/team/${agent.id}`);
+      swap(`/agents/${agent.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create');
     } finally {

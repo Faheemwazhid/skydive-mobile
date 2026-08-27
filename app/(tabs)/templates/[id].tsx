@@ -32,7 +32,7 @@ export default function TemplateDetailScreen() {
         purpose: template.blurb,
         characterId: template.characterId,
       });
-      swap(`/team/${agent.id}`);
+      swap(`/agents/${agent.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add');
     } finally {
@@ -115,7 +115,7 @@ export default function TemplateDetailScreen() {
 
       <View style={styles.footer}>
         <Button
-          label={busy ? 'Adding…' : 'Add to your team'}
+          label={busy ? 'Adding…' : 'Add to your workspace'}
           onPress={onAdd}
           disabled={busy}
         />
