@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -16,6 +16,7 @@ import { useChatPort } from '@/src/chat/ChatProvider';
 import { MarkdownText } from '@/src/chat/markdown';
 import { resolveThreadAgent } from '@/src/chat/resolveThreadAgent';
 import { AppText, Avatar, Button, Screen } from '@/src/components';
+import { swap } from '@/src/nav';
 import type { Agent } from '@/src/domain/agent';
 import type { Message } from '@/src/domain/chat';
 import { color, font, radius, space } from '@/src/theme/tokens';
@@ -27,9 +28,9 @@ export default function ThreadScreen() {
   }>();
   const chat = useChatPort();
   const agents = useAgentsRepo();
-  const router = useRouter();
+  const isDraft = id === 'new' || id === 'tnew';
   const [conversationId, setConversationId] = useState(
-    id === 'new' ? undefined : id,
+    isDraft ? undefined : id,
   );
   const [agent, setAgent] = useState<Agent | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -78,7 +79,7 @@ export default function ThreadScreen() {
         prompt,
       });
       setConversationId(result.conversationId);
-      if (id === 'new') router.replace(`/chat/${result.conversationId}`);
+      if (isDraft) swap(`/chats/${result.conversationId}`);
       setMessages(await chat.listMessages(result.conversationId));
     } catch {
       setDraft(prompt);

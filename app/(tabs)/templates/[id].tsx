@@ -1,9 +1,10 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
 import { AppText, Avatar, Button, Screen } from '@/src/components';
+import { swap } from '@/src/nav';
 import { getTemplate } from '@/src/templates/catalog';
 import { color, space } from '@/src/theme/tokens';
 
@@ -11,7 +12,6 @@ export default function TemplateDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const template = id ? getTemplate(id) : undefined;
   const repo = useAgentsRepo();
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export default function TemplateDetailScreen() {
         purpose: template.blurb,
         characterId: template.characterId,
       });
-      router.replace(`/agent/${agent.id}`);
+      swap(`/team/${agent.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add');
     } finally {

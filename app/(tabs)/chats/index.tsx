@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -7,6 +7,7 @@ import { useChatPort } from '@/src/chat/ChatProvider';
 import { AppText, Avatar, EmptyState, Screen } from '@/src/components';
 import type { Agent } from '@/src/domain/agent';
 import type { Conversation } from '@/src/domain/chat';
+import { go } from '@/src/nav';
 import { useSession } from '@/src/session/SessionProvider';
 import { color, radius, space } from '@/src/theme/tokens';
 
@@ -14,7 +15,6 @@ export default function ChatsTab() {
   const session = useSession();
   const chat = useChatPort();
   const agents = useAgentsRepo();
-  const router = useRouter();
   const [rows, setRows] = useState<
     { conversation: Conversation; agent: Agent | null }[]
   >([]);
@@ -59,7 +59,7 @@ export default function ChatsTab() {
         <AppText variant="title">Chats</AppText>
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.push('/chat/new')}
+          onPress={() => go('/chats/new')}
         >
           <AppText variant="body">New</AppText>
         </Pressable>
@@ -74,7 +74,7 @@ export default function ChatsTab() {
             <Pressable
               key={conversation.id}
               accessibilityRole="button"
-              onPress={() => router.push(`/chat/${conversation.id}`)}
+              onPress={() => go(`/chats/${conversation.id}`)}
               style={styles.row}
             >
               <Avatar characterId={agent?.characterId} size="sm" />
