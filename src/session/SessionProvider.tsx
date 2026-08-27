@@ -38,7 +38,7 @@ export function useSession(): Session {
 
 export function useSessionActions(): Pick<
   SessionStore,
-  'login' | 'logout' | 'connectKey' | 'skipConnect'
+  'login' | 'logout' | 'connectKey' | 'skipConnect' | 'beginConnect'
 > {
   const store = useStore();
   return useMemo(
@@ -47,6 +47,7 @@ export function useSessionActions(): Pick<
       logout: store.logout,
       connectKey: store.connectKey,
       skipConnect: store.skipConnect,
+      beginConnect: store.beginConnect,
     }),
     [store],
   );

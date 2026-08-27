@@ -61,6 +61,13 @@ export function createMockSessionStore(
       };
       emit();
     },
+    async beginConnect() {
+      session = {
+        ...session,
+        skippedConnect: false,
+      };
+      emit();
+    },
   };
 }
 
