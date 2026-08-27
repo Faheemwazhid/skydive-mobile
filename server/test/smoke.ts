@@ -151,6 +151,25 @@ async function main() {
       '/v1/agents/01a04269-0000-0000-0000-000000000000', {}, token);
     check('unknown agent is 404', missing.status === 404);
 
+
+    const convos = await call('/v1/chat/conversations', {}, token);
+    check('lists live conversations', convos.status === 200,
+      `${((convos.body.conversations ?? []) as unknown[]).length} thread(s)`);
+
+    const badConvo = await call('/v1/chat/conversations/nope/messages', {}, token);
+    check('malformed conversation id is 404', badConvo.status === 404);
+
+    const sent = await call('/v1/chat/send', {
+      method: 'POST',
+      body: JSON.stringify({
+        agentId: String(first.id),
+        prompt: 'Reply with exactly: smoke-ok',
+      }),
+    }, token);
+    const reply = String((sent.body as Record<string, unknown>).reply ?? '');
+    check('sends and receives a real reply', sent.status === 200 && reply.length > 0,
+      reply.slice(0, 40));
+
     await call('/v1/auth/disconnect', { method: 'POST' }, token);
     const gated = await call('/v1/agents', {}, token);
     check('agents require a connected workspace', gated.status === 409,

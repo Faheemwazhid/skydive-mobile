@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 
-import { chatPort as defaultPort } from '@/src/chat/mockChatPort';
+import { httpChatPort as defaultPort } from '@/src/chat/httpChatPort';
 import type { ChatPort } from '@/src/domain/chat';
 
 const Ctx = createContext<ChatPort | null>(null);
