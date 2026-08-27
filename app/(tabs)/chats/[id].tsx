@@ -23,6 +23,9 @@ import type { Message } from '@/src/domain/chat';
 import { swap } from '@/src/nav';
 import { color, font, radius, space } from '@/src/theme/tokens';
 
+const COMPOSER_MIN_HEIGHT = 44;
+const COMPOSER_MAX_HEIGHT = 120;
+
 function ThreadEmpty({ agent }: { agent: Agent | null }) {
   return (
     <View style={styles.empty}>
@@ -54,6 +57,7 @@ export default function ThreadScreen() {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
+  const [inputHeight, setInputHeight] = useState(COMPOSER_MIN_HEIGHT);
   const [sending, setSending] = useState(false);
 
   const load = useCallback(async () => {
@@ -89,6 +93,7 @@ export default function ThreadScreen() {
     if (!prompt) return;
     setSending(true);
     setDraft('');
+    setInputHeight(COMPOSER_MIN_HEIGHT);
     try {
       const result = await chat.send({
         agentId: agent.id,
@@ -175,10 +180,21 @@ export default function ThreadScreen() {
           <TextInput
             value={draft}
             onChangeText={setDraft}
+            onContentSizeChange={(event) => {
+              const next = event.nativeEvent.contentSize.height;
+              setInputHeight(
+                Math.min(
+                  Math.max(COMPOSER_MIN_HEIGHT, next),
+                  COMPOSER_MAX_HEIGHT,
+                ),
+              );
+            }}
             placeholder="Message"
             placeholderTextColor={color.greyMedium}
-            style={styles.input}
+            style={[styles.input, { height: inputHeight }]}
             multiline
+            numberOfLines={1}
+            textAlignVertical="center"
           />
           <Pressable
             accessibilityRole="button"
@@ -249,7 +265,7 @@ const styles = StyleSheet.create({
   },
   composer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: space.sm,
     paddingHorizontal: space.md,
     paddingVertical: 12,
@@ -266,8 +282,6 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    minHeight: 44,
-    maxHeight: 120,
     paddingTop: 12,
     paddingBottom: 12,
     paddingHorizontal: space.md,
@@ -275,6 +289,7 @@ const styles = StyleSheet.create({
     backgroundColor: color.offWhite,
     fontFamily: font.family,
     fontSize: font.size.body,
+    lineHeight: 20,
     color: color.greyDark,
   },
   sendButton: {
