@@ -16,7 +16,7 @@ import { useAgentsRepo } from '@/src/agents/AgentsProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatPort } from '@/src/chat/ChatProvider';
 import { MarkdownText } from '@/src/chat/markdown';
-import { pollUntilReply } from '@/src/chat/pollUntilReply';
+import { hasReplyLanded, pollUntilReply } from '@/src/chat/pollUntilReply';
 import { resolveThreadAgent } from '@/src/chat/resolveThreadAgent';
 import { AppText, Avatar, BackButton, Screen } from '@/src/components';
 import type { Agent } from '@/src/domain/agent';
@@ -64,7 +64,21 @@ export default function ThreadScreen() {
 
   const load = useCallback(async () => {
     if (!conversationId) return;
-    setMessages(await chat.listMessages(conversationId));
+    const loaded = await chat.listMessages(conversationId);
+    setMessages(loaded);
+
+    // Sending the first message of a draft navigates to the real conversation,
+    // which unmounts this screen and cancels the poll that was waiting on the
+    // reply. Resuming here means the reply still lands on the new screen.
+    if (loaded.length > 0 && !hasReplyLanded(loaded)) {
+      await pollUntilReply({
+        chat,
+        conversationId,
+        onMessages: setMessages,
+        isCancelled: () => left.current,
+        maxAttempts: 25,
+      });
+    }
   }, [chat, conversationId]);
 
   useEffect(() => {
