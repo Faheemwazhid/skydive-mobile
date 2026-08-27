@@ -11,12 +11,24 @@ Built as small pull requests. Start here:
 
 ## Status
 
-Frontend MVP is on `main` (PRs 1–11). Data is mocked. Live Skydive chat and roster are PR 12 (`feat/bff-chat`), not started.
+Live. The app talks to a BFF that holds your Skydive API key and calls Skydive
+for agents and chat.
 
 ```bash
 npm install
+
+# 1. the backend
+export DATABASE_URL="postgres://…"
+export SESSION_SECRET="$(openssl rand -base64 24)"
+npm run server                     # :8787
+
+# 2. the app
+cp .env.example .env               # point EXPO_PUBLIC_BFF_URL at the BFF
 npx expo start
 ```
+
+Sign in with any email, paste an account-level `sky_live_` key, and the roster
+is your real workspace. See [server/README.md](server/README.md).
 
 ## Constraints (do not violate in PRs)
 

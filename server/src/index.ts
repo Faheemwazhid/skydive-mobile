@@ -5,6 +5,7 @@ import { cors } from 'hono/cors';
 import { migrate } from './db.ts';
 import { agentRoutes } from './routes/agents.ts';
 import { authRoutes } from './routes/auth.ts';
+import { chatRoutes } from './routes/chat.ts';
 import type { AppEnv } from './session.ts';
 import { SkydiveError } from './skydive.ts';
 
@@ -20,6 +21,7 @@ app.use(
 app.get('/health', (c) => c.json({ ok: true }));
 app.route('/v1/auth', authRoutes);
 app.route('/v1/agents', agentRoutes);
+app.route('/v1/chat', chatRoutes);
 
 /**
  * A revoked key is the one upstream failure the app can act on, so it keeps its
