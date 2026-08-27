@@ -4,7 +4,9 @@
   "outputDirectory": "dist",
   "framework": null,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/((?!api|_expo|assets|favicon).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api|_expo|assets|favicon).*)",
+      "destination": "/index.html"
+    }
   ]
 }

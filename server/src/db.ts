@@ -10,7 +10,14 @@ export function db(): Pool {
   if (!connectionString) {
     throw new Error('DATABASE_URL is not set. See server/README.md');
   }
-  pool = new Pool({ connectionString, max: 5 });
+  pool = new Pool({
+    connectionString,
+    max: 5,
+    // A serverless request that cannot reach the database should fail with an
+    // error, not hang until the platform kills it with an opaque timeout.
+    connectionTimeoutMillis: 8000,
+    idleTimeoutMillis: 10000,
+  });
   return pool;
 }
 
