@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,11 +16,26 @@ import { useAgentsRepo } from '@/src/agents/AgentsProvider';
 import { useChatPort } from '@/src/chat/ChatProvider';
 import { MarkdownText } from '@/src/chat/markdown';
 import { resolveThreadAgent } from '@/src/chat/resolveThreadAgent';
-import { AppText, Avatar, Button, Screen } from '@/src/components';
-import { swap } from '@/src/nav';
+import { AppText, Avatar, Screen } from '@/src/components';
 import type { Agent } from '@/src/domain/agent';
 import type { Message } from '@/src/domain/chat';
+import { swap } from '@/src/nav';
 import { color, font, radius, space } from '@/src/theme/tokens';
+
+function ThreadEmpty({ agent }: { agent: Agent | null }) {
+  return (
+    <View style={styles.empty}>
+      <Avatar characterId={agent?.characterId} size="lg" />
+      <AppText variant="title" style={styles.emptyTitle}>
+        {agent ? `Say hello to ${agent.name}` : 'Start a chat'}
+      </AppText>
+      <AppText variant="body" tone="muted" style={styles.emptyBody}>
+        {agent?.description ??
+          'Ask for an outcome, not a list of steps. Replies are mocked until the backend lands.'}
+      </AppText>
+    </View>
+  );
+}
 
 export default function ThreadScreen() {
   const { id, agentId: agentIdParam } = useLocalSearchParams<{
@@ -29,6 +45,7 @@ export default function ThreadScreen() {
   const chat = useChatPort();
   const agents = useAgentsRepo();
   const isDraft = id === 'new' || id === 'tnew';
+  const scroller = useRef<ScrollView>(null);
   const [conversationId, setConversationId] = useState(
     isDraft ? undefined : id,
   );
@@ -38,10 +55,8 @@ export default function ThreadScreen() {
   const [sending, setSending] = useState(false);
 
   const load = useCallback(async () => {
-    if (conversationId) {
-      const thread = await chat.listMessages(conversationId);
-      setMessages(thread);
-    }
+    if (!conversationId) return;
+    setMessages(await chat.listMessages(conversationId));
   }, [chat, conversationId]);
 
   useEffect(() => {
@@ -88,6 +103,8 @@ export default function ThreadScreen() {
     }
   }
 
+  const canSend = draft.trim().length > 0 && !sending;
+
   return (
     <Screen padded={false}>
       <View style={styles.header}>
@@ -103,31 +120,54 @@ export default function ThreadScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.thread}>
-          {messages.map((message) => (
-            <View
-              key={message.id}
-              style={[
-                styles.bubble,
-                message.role === 'user' ? styles.user : styles.agent,
-              ]}
-            >
-              <MarkdownText
-                body={message.body}
-                tone={message.role === 'user' ? 'user' : 'agent'}
-              />
+        <ScrollView
+          ref={scroller}
+          style={styles.flex}
+          contentContainerStyle={[
+            styles.thread,
+            messages.length === 0 && styles.threadEmpty,
+          ]}
+          onContentSizeChange={() =>
+            scroller.current?.scrollToEnd({ animated: false })
+          }
+        >
+          {messages.length === 0 ? (
+            <ThreadEmpty agent={agent} />
+          ) : (
+            messages.map((message) => (
+              <View
+                key={message.id}
+                style={[
+                  styles.bubble,
+                  message.role === 'user' ? styles.user : styles.agent,
+                ]}
+              >
+                <MarkdownText
+                  body={message.body}
+                  tone={message.role === 'user' ? 'user' : 'agent'}
+                />
+              </View>
+            ))
+          )}
+          {sending ? (
+            <View style={[styles.bubble, styles.agent, styles.typing]}>
+              <AppText variant="caption" tone="muted">
+                Working…
+              </AppText>
             </View>
-          ))}
+          ) : null}
         </ScrollView>
         <View style={styles.composer}>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Add attachment"
+            hitSlop={8}
             onPress={() =>
               Alert.alert('Attachments', 'Coming with the backend.')
             }
-            style={styles.attach}
+            style={styles.iconButton}
           >
-            <AppText variant="caption">Attach</AppText>
+            <Ionicons name="add" size={22} color={color.greyMedium} />
           </Pressable>
           <TextInput
             value={draft}
@@ -137,12 +177,15 @@ export default function ThreadScreen() {
             style={styles.input}
             multiline
           />
-          <Button
-            label={sending ? '…' : 'Send'}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Send message"
+            disabled={!canSend}
             onPress={onSend}
-            disabled={sending}
-            style={styles.send}
-          />
+            style={[styles.sendButton, !canSend && styles.sendDisabled]}
+          >
+            <Ionicons name="arrow-up" size={20} color={color.white} />
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     </Screen>
@@ -163,14 +206,32 @@ const styles = StyleSheet.create({
   },
   headerText: { flex: 1 },
   thread: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
     padding: space.lg,
     gap: space.sm,
-    paddingBottom: space.xl,
+  },
+  threadEmpty: {
+    justifyContent: 'center',
+  },
+  empty: {
+    alignItems: 'center',
+    gap: space.sm,
+    paddingHorizontal: space.lg,
+  },
+  emptyTitle: {
+    marginTop: space.sm,
+    textAlign: 'center',
+  },
+  emptyBody: {
+    textAlign: 'center',
+    maxWidth: 280,
   },
   bubble: {
     maxWidth: '86%',
     borderRadius: radius.md,
-    padding: space.md,
+    paddingHorizontal: space.md,
+    paddingVertical: 12,
   },
   agent: {
     alignSelf: 'flex-start',
@@ -180,28 +241,48 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     backgroundColor: color.greyDark,
   },
+  typing: {
+    paddingVertical: space.sm,
+  },
   composer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: space.sm,
-    padding: space.md,
+    paddingHorizontal: space.md,
+    paddingVertical: 12,
     backgroundColor: color.white,
     borderTopWidth: 1,
     borderTopColor: color.greyLight,
   },
-  attach: {
-    paddingVertical: space.sm,
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: {
     flex: 1,
-    minHeight: 40,
+    minHeight: 44,
     maxHeight: 120,
+    paddingTop: 12,
+    paddingBottom: 12,
+    paddingHorizontal: space.md,
+    borderRadius: radius.lg,
+    backgroundColor: color.offWhite,
     fontFamily: font.family,
     fontSize: font.size.body,
     color: color.greyDark,
   },
-  send: {
-    minHeight: 40,
-    paddingHorizontal: space.md,
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.greyDark,
+  },
+  sendDisabled: {
+    backgroundColor: color.greyMedium,
   },
 });
