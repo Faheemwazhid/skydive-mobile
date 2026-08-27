@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -13,13 +13,13 @@ import {
 import type { Agent } from '@/src/domain/agent';
 import { feedCopy, type FeedItem } from '@/src/domain/feed';
 import { useSession, useSessionActions } from '@/src/session/SessionProvider';
+import { go } from '@/src/nav';
 import { color, radius, space } from '@/src/theme/tokens';
 
 export default function TeamTab() {
   const session = useSession();
   const { beginConnect } = useSessionActions();
   const repo = useAgentsRepo();
-  const router = useRouter();
   const [agents, setAgents] = useState<Agent[]>([]);
 
   const load = useCallback(() => {
@@ -60,7 +60,7 @@ export default function TeamTab() {
           <AppText variant="title">Team</AppText>
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push('/create-agent')}
+            onPress={() => go('/team/create')}
           >
             <AppText variant="body">New</AppText>
           </Pressable>
@@ -70,7 +70,7 @@ export default function TeamTab() {
             <Pressable
               key={agent.id}
               accessibilityRole="button"
-              onPress={() => router.push(`/agent/${agent.id}`)}
+              onPress={() => go(`/team/${agent.id}`)}
               style={styles.row}
             >
               <Avatar characterId={agent.characterId} size="md" />

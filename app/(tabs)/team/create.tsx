@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Pressable,
@@ -10,13 +9,13 @@ import {
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
 import { AppText, Avatar, Button, Screen } from '@/src/components';
+import { go, swap } from '@/src/nav';
 import { CHARACTER_IDS } from '@/src/theme/characters';
 import { color, font, radius, space } from '@/src/theme/tokens';
 import type { CharacterId } from '@/src/theme/characters';
 
 export default function CreateAgentScreen() {
   const repo = useAgentsRepo();
-  const router = useRouter();
   const [characterId, setCharacterId] = useState<CharacterId>('moss');
   const [name, setName] = useState('');
   const [purpose, setPurpose] = useState('');
@@ -28,7 +27,7 @@ export default function CreateAgentScreen() {
     setError(null);
     try {
       const agent = await repo.create({ name, purpose, characterId });
-      router.replace(`/agent/${agent.id}`);
+      swap(`/team/${agent.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create');
     } finally {
@@ -87,7 +86,7 @@ export default function CreateAgentScreen() {
         />
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.push('/(tabs)/templates')}
+          onPress={() => go('/templates')}
           style={styles.templates}
         >
           <AppText variant="body">Browse templates</AppText>

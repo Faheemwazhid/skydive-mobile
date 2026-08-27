@@ -52,11 +52,6 @@ export default function RootLayout() {
             >
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="agent/[id]" />
-              <Stack.Screen name="chat/[id]" />
-              <Stack.Screen name="chat/new" />
-              <Stack.Screen name="create-agent" />
-              <Stack.Screen name="templates/[id]" />
             </Stack>
           </Gate>
         </ChatProvider>

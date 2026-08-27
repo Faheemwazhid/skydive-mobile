@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -6,6 +6,7 @@ import { useAgentsRepo } from '@/src/agents/AgentsProvider';
 import { useChatPort } from '@/src/chat/ChatProvider';
 import { latestConversationForAgent } from '@/src/chat/latestConversation';
 import { AppText, Avatar, Button, Screen } from '@/src/components';
+import { go } from '@/src/nav';
 import type { Agent } from '@/src/domain/agent';
 import type { Conversation } from '@/src/domain/chat';
 import { color, space } from '@/src/theme/tokens';
@@ -14,7 +15,6 @@ export default function AgentProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const agents = useAgentsRepo();
   const chat = useChatPort();
-  const router = useRouter();
   const [agent, setAgent] = useState<Agent | null>(null);
   const [chats, setChats] = useState<Conversation[]>([]);
 
@@ -37,10 +37,10 @@ export default function AgentProfileScreen() {
     if (!agent) return;
     const latest = await latestConversationForAgent(chat, agent.id);
     if (latest) {
-      router.push(`/chat/${latest.id}`);
+      go(`/chats/${latest.id}`);
       return;
     }
-    router.push({ pathname: '/chat/[id]', params: { id: 'new', agentId: agent.id } });
+    go(`/chats/tnew?agentId=${agent.id}`);
   }
 
   if (!agent) {
@@ -57,7 +57,7 @@ export default function AgentProfileScreen() {
     <Screen padded={false}>
       <ScrollView>
         <Image
-          source={require('../../assets/world/cover.jpg')}
+          source={require('../../../assets/world/cover.jpg')}
           style={styles.cover}
         />
         <View style={styles.body}>
@@ -86,7 +86,7 @@ export default function AgentProfileScreen() {
               <Pressable
                 key={convo.id}
                 accessibilityRole="button"
-                onPress={() => router.push(`/chat/${convo.id}`)}
+                onPress={() => go(`/chats/${convo.id}`)}
                 style={styles.chatRow}
               >
                 <AppText variant="body">{convo.title}</AppText>

@@ -1,12 +1,11 @@
-import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText, Avatar, Screen } from '@/src/components';
+import { go } from '@/src/nav';
 import { templates } from '@/src/templates/catalog';
 import { color, radius, space } from '@/src/theme/tokens';
 
 export default function TemplatesTab() {
-  const router = useRouter();
 
   return (
     <Screen padded={false}>
@@ -19,7 +18,7 @@ export default function TemplatesTab() {
           <Pressable
             key={template.id}
             accessibilityRole="button"
-            onPress={() => router.push(`/templates/${template.id}`)}
+            onPress={() => go(`/templates/${template.id}`)}
             style={styles.card}
           >
             <Avatar characterId={template.characterId} size="md" />
