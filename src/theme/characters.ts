@@ -1,16 +1,13 @@
 import type { ImageSourcePropType } from 'react-native';
 
-export const CHARACTER_IDS = [
-  'poppy',
-  'cleo',
-  'river',
-  'dot',
-  'moss',
-  'sol',
-  'sky',
-] as const;
+import {
+  CHARACTER_IDS,
+  isCharacterId,
+  type CharacterId,
+} from '@/src/domain/characters';
 
-export type CharacterId = (typeof CHARACTER_IDS)[number];
+export { CHARACTER_IDS, isCharacterId };
+export type { CharacterId };
 
 export const characterMeta: Record<
   CharacterId,
@@ -53,6 +50,4 @@ export const characterMeta: Record<
   },
 };
 
-export function isCharacterId(value: string): value is CharacterId {
-  return (CHARACTER_IDS as readonly string[]).includes(value);
-}
+
