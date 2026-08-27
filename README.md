@@ -11,7 +11,12 @@ Built as small pull requests. Start here:
 
 ## Status
 
-Architecture is the first PR. App bootstrap is next (`feat/bootstrap-expo`). There is no runnable app on `main` until that lands.
+Architecture is on `main`. App bootstrap (`feat/bootstrap-expo`) adds Expo Router, Inter, and brand tokens. Tabs and screens follow in later PRs.
+
+```bash
+npm install
+npx expo start
+```
 
 ## Constraints (do not violate in PRs)
 
