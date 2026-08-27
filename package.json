@@ -34,7 +34,8 @@
     "typecheck": "tsc --noEmit",
     "test:session": "npx tsx src/session/mockSessionStore.test.ts",
     "test:agents": "npx tsx src/agents/mockAgentsRepo.test.ts",
-    "test:feed": "npx tsx src/agents/feedFromAgents.test.ts"
+    "test:feed": "npx tsx src/agents/feedFromAgents.test.ts",
+    "test:chat": "npx tsx src/chat/mockChatPort.test.ts"
   },
   "private": true
 }
