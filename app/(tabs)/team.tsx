@@ -1,5 +1,6 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
 import { feedFromAgents } from '@/src/agents/feedFromAgents';
@@ -18,6 +19,7 @@ export default function TeamTab() {
   const session = useSession();
   const { beginConnect } = useSessionActions();
   const repo = useAgentsRepo();
+  const router = useRouter();
   const [agents, setAgents] = useState<Agent[]>([]);
 
   useEffect(() => {
@@ -55,7 +57,12 @@ export default function TeamTab() {
         <AppText variant="title">Team</AppText>
         <View style={styles.list}>
           {agents.map((agent) => (
-            <View key={agent.id} style={styles.row}>
+            <Pressable
+              key={agent.id}
+              accessibilityRole="button"
+              onPress={() => router.push(`/agent/${agent.id}`)}
+              style={styles.row}
+            >
               <Avatar characterId={agent.characterId} size="md" />
               <View style={styles.rowText}>
                 <AppText variant="body">{agent.name}</AppText>
@@ -63,7 +70,7 @@ export default function TeamTab() {
                   {agent.description ?? agent.model}
                 </AppText>
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
         <AppText variant="caption" tone="muted" style={styles.feedLabel}>
