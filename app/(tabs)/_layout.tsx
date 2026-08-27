@@ -1,28 +1,48 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet, Text, type ColorValue } from 'react-native';
+import type { ColorValue } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { needsConnect, needsLogin } from '@/src/domain/session';
 import { useSession } from '@/src/session/SessionProvider';
 import { color, font } from '@/src/theme/tokens';
 
-const GLYPH: Record<string, string> = {
-  team: '◉',
-  chats: '◎',
-  templates: '▦',
-  you: '○',
+type IoniconName = keyof typeof Ionicons.glyphMap;
+
+const ICONS: Record<string, { on: IoniconName; off: IoniconName }> = {
+  team: { on: 'people', off: 'people-outline' },
+  chats: { on: 'chatbubble', off: 'chatbubble-outline' },
+  templates: { on: 'grid', off: 'grid-outline' },
+  you: { on: 'person-circle', off: 'person-circle-outline' },
 };
 
-function TabIcon({ name, color: tint }: { name: string; color: ColorValue }) {
-  return (
-    <Text style={[styles.icon, { color: tint }]} accessibilityElementsHidden>
-      {GLYPH[name] ?? '•'}
-    </Text>
-  );
+const BAR_CONTENT_HEIGHT = 64;
+const MIN_BOTTOM_PAD = 12;
+
+function icon(name: string) {
+  return function TabBarIcon({
+    color: tint,
+    focused,
+  }: {
+    color: ColorValue;
+    focused: boolean;
+  }) {
+    const set = ICONS[name];
+    return (
+      <Ionicons
+        name={focused ? set.on : set.off}
+        size={22}
+        color={tint as string}
+      />
+    );
+  };
 }
 
 export default function TabsLayout() {
   const session = useSession();
+  const insets = useSafeAreaInsets();
   const hideTabBar = needsLogin(session) || needsConnect(session);
+  const bottomPad = Math.max(insets.bottom, MIN_BOTTOM_PAD);
 
   return (
     <Tabs
@@ -33,64 +53,38 @@ export default function TabsLayout() {
         tabBarLabelStyle: {
           fontFamily: font.familyMedium,
           fontSize: 11,
-          marginBottom: Platform.OS === 'web' ? 6 : 2,
+          lineHeight: 14,
+          marginTop: 4,
+          marginBottom: 0,
         },
-        tabBarItemStyle: {
-          paddingTop: 8,
-        },
+        tabBarIconStyle: { height: 24, marginTop: 0 },
+        tabBarItemStyle: { paddingTop: 10, paddingBottom: 0 },
         tabBarStyle: {
+          display: hideTabBar ? 'none' : 'flex',
           backgroundColor: color.white,
           borderTopColor: color.greyLight,
-          height: Platform.OS === 'web' ? 72 : 56,
-          paddingBottom: Platform.OS === 'web' ? 8 : 4,
-          display: hideTabBar ? 'none' : undefined,
+          borderTopWidth: 1,
+          height: BAR_CONTENT_HEIGHT + bottomPad,
+          paddingBottom: bottomPad,
         },
       }}
     >
       <Tabs.Screen
         name="team"
-        options={{
-          title: 'Team',
-          tabBarIcon: ({ color: tint }) => (
-            <TabIcon name="team" color={tint} />
-          ),
-        }}
+        options={{ title: 'Team', tabBarIcon: icon('team') }}
       />
       <Tabs.Screen
         name="chats"
-        options={{
-          title: 'Chats',
-          tabBarIcon: ({ color: tint }) => (
-            <TabIcon name="chats" color={tint} />
-          ),
-        }}
+        options={{ title: 'Chats', tabBarIcon: icon('chats') }}
       />
       <Tabs.Screen
         name="templates"
-        options={{
-          title: 'Templates',
-          tabBarIcon: ({ color: tint }) => (
-            <TabIcon name="templates" color={tint} />
-          ),
-        }}
+        options={{ title: 'Templates', tabBarIcon: icon('templates') }}
       />
       <Tabs.Screen
         name="you"
-        options={{
-          title: 'You',
-          tabBarIcon: ({ color: tint }) => (
-            <TabIcon name="you" color={tint} />
-          ),
-        }}
+        options={{ title: 'You', tabBarIcon: icon('you') }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  icon: {
-    fontSize: 16,
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-});

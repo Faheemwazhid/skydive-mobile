@@ -7,6 +7,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AgentsProvider } from '@/src/agents/AgentsProvider';
 import { ChatProvider } from '@/src/chat/ChatProvider';
@@ -39,23 +40,25 @@ export default function RootLayout() {
   }
 
   return (
-    <SessionProvider>
-      <AgentsProvider>
-        <ChatProvider>
-          <StatusBar style="dark" />
-          <Gate>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: color.offWhite },
-              }}
-            >
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(tabs)" />
-            </Stack>
-          </Gate>
-        </ChatProvider>
-      </AgentsProvider>
-    </SessionProvider>
+    <SafeAreaProvider>
+      <SessionProvider>
+        <AgentsProvider>
+          <ChatProvider>
+            <StatusBar style="dark" />
+            <Gate>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: color.offWhite },
+                }}
+              >
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(tabs)" />
+              </Stack>
+            </Gate>
+          </ChatProvider>
+        </AgentsProvider>
+      </SessionProvider>
+    </SafeAreaProvider>
   );
 }
