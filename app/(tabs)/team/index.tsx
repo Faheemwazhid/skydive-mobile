@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -8,6 +9,7 @@ import {
   AppText,
   Avatar,
   EmptyState,
+  RootHeader,
   Screen,
 } from '@/src/components';
 import type { Agent } from '@/src/domain/agent';
@@ -54,17 +56,21 @@ export default function TeamTab() {
   const feed = feedFromAgents(agents);
 
   return (
-    <Screen padded={false}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.header}>
-          <AppText variant="title">Team</AppText>
+    <Screen padded={false} hasHeader>
+      <RootHeader
+        title="Team"
+        action={
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Create a new agent"
             onPress={() => go('/team/create')}
+            style={styles.headerAction}
           >
-            <AppText variant="body">New</AppText>
+            <Ionicons name="add" size={24} color={color.greyDark} />
           </Pressable>
-        </View>
+        }
+      />
+      <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.list}>
           {agents.map((agent) => (
             <Pressable
@@ -106,20 +112,21 @@ function FeedRow({ item }: { item: FeedItem }) {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  headerAction: {
+    width: 44,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   scroll: {
     paddingHorizontal: space.lg,
-    paddingTop: space.md,
+    paddingTop: 0,
     paddingBottom: space.xl,
     gap: space.sm,
   },
   list: {
     gap: space.sm,
-    marginTop: space.md,
+    marginTop: 0,
   },
   row: {
     flexDirection: 'row',

@@ -3,3 +3,9 @@ export { Avatar } from '@/src/components/Avatar';
 export { Button } from '@/src/components/Button';
 export { EmptyState } from '@/src/components/EmptyState';
 export { Screen } from '@/src/components/Screen';
+export {
+  BackButton,
+  DetailHeader,
+  RootHeader,
+} from '@/src/components/ScreenHeader';
+export { Row, Section } from '@/src/components/Section';

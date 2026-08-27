@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
-import { AppText, Avatar, Screen } from '@/src/components';
+import { AppText, Avatar, DetailHeader, Screen } from '@/src/components';
 import { swap } from '@/src/nav';
 import type { Agent } from '@/src/domain/agent';
 import { color, radius, space } from '@/src/theme/tokens';
@@ -16,11 +16,8 @@ export default function NewChatScreen() {
   }, [repo]);
 
   return (
-    <Screen>
-      <AppText variant="title">New chat</AppText>
-      <AppText variant="body" tone="muted" style={styles.lede}>
-        Pick an agent.
-      </AppText>
+    <Screen padded={false} hasHeader>
+      <DetailHeader title="New chat" />
       <ScrollView contentContainerStyle={styles.list}>
         {agents.map((agent) => (
           <Pressable
@@ -45,7 +42,12 @@ export default function NewChatScreen() {
 
 const styles = StyleSheet.create({
   lede: { marginTop: space.sm, marginBottom: space.md },
-  list: { gap: space.sm, paddingBottom: space.xl },
+  list: {
+    gap: space.sm,
+    paddingHorizontal: space.lg,
+    paddingTop: space.md,
+    paddingBottom: space.xl,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
