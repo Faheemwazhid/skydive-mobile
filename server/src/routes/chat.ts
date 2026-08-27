@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 
-import { requireSession, workspaceKey, type AppEnv } from '../session.ts';
-import { APP_BASE, skydiveJson } from '../skydive.ts';
+import { requireSession, workspaceKey, type AppEnv } from '../session';
+import { APP_BASE, skydiveJson } from '../skydive';
 
 const conversation = z
   .object({

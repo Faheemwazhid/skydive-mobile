@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 
-import { SCHEMA_SQL } from './schema.ts';
+import { SCHEMA_SQL } from './schema';
 
 let pool: Pool | null = null;
 

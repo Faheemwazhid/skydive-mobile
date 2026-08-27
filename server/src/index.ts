@@ -1,55 +1,12 @@
 import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
 
-import { migrate } from './db.ts';
-import { agentRoutes } from './routes/agents.ts';
-import { authRoutes } from './routes/auth.ts';
-import { chatRoutes } from './routes/chat.ts';
-import type { AppEnv } from './session.ts';
-import { SkydiveError } from './skydive.ts';
+import { createApp, ensureSchema } from './app';
 
 const PORT = Number(process.env.BFF_PORT ?? 8787);
 
-export const app = new Hono<AppEnv>();
-
-app.use(
-  '*',
-  cors({ origin: '*', allowHeaders: ['authorization', 'content-type'] }),
-);
-
-app.get('/health', (c) => c.json({ ok: true }));
-app.route('/v1/auth', authRoutes);
-app.route('/v1/agents', agentRoutes);
-app.route('/v1/chat', chatRoutes);
-
-/**
- * A revoked key is the one upstream failure the app can act on, so it keeps its
- * own code. Everything else is a 502 the client should not try to interpret.
- */
-app.onError((err, c) => {
-  if (err instanceof SkydiveError) {
-    if (err.code === 'unauthorized') {
-      return c.json(
-        { error: 'Skydive rejected the stored key', code: 'key_invalid' },
-        502,
-      );
-    }
-    if (err.code === 'not_found') {
-      return c.json({ error: 'not found', code: 'not_found' }, 404);
-    }
-    if (err.code === 'rate_limited') {
-      return c.json({ error: 'Skydive is rate limiting', code: 'rate_limited' }, 429);
-    }
-    console.error('[bff] skydive:', err.code, err.message);
-    return c.json({ error: 'Skydive request failed', code: err.code }, 502);
-  }
-  console.error('[bff]', err);
-  return c.json({ error: 'internal error' }, 500);
-});
-
 async function main() {
-  await migrate();
+  await ensureSchema();
+  const app = createApp();
   serve({ fetch: app.fetch, port: PORT }, (info) => {
     console.log(`[bff] listening on :${info.port}`);
   });
