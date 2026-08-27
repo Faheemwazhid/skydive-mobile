@@ -14,6 +14,9 @@ const CANNED_REPLY = [
   '- No skills in MVP',
 ].join('\n');
 
+const REPLY_APPEARS_MS = 200;
+const REPLY_SETTLES_MS = 500;
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -85,32 +88,38 @@ export function createMockChatPort(): ChatPort {
       }
 
       const thread = messages.get(conversation.id) ?? [];
-      const userMessage: Message = {
+      thread.push({
         id: id('msg'),
         conversationId: conversation.id,
         role: 'user',
         body: prompt,
         status: 'sent',
-      };
-      thread.push(userMessage);
+      });
 
-      await new Promise((resolve) => setTimeout(resolve, 400));
-
-      const replyMessage: Message = {
-        id: id('msg'),
-        conversationId: conversation.id,
-        role: 'agent',
-        body: CANNED_REPLY,
-        status: 'sent',
-      };
-      thread.push(replyMessage);
       messages.set(conversation.id, thread);
       conversation.updatedAt = nowIso();
 
+      // Mirrors the real service in three phases: for a moment the thread holds
+      // only the user's message, then the reply appears as `pending`, then it
+      // settles. A mock that skips the first phase hides polling bugs.
+      const reply: Message = {
+        id: id('msg'),
+        conversationId: conversation.id,
+        role: 'agent',
+        body: '',
+        status: 'pending',
+      };
+      setTimeout(() => {
+        thread.push(reply);
+      }, REPLY_APPEARS_MS);
+      setTimeout(() => {
+        reply.body = CANNED_REPLY;
+        reply.status = 'sent';
+      }, REPLY_SETTLES_MS);
+
       return {
         conversationId: conversation.id,
-        messageId: replyMessage.id,
-        reply: CANNED_REPLY,
+        messageId: reply.id,
       };
     },
   };

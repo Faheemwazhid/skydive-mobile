@@ -13,7 +13,23 @@ async function run() {
     prompt: 'hello from prototype',
   });
   if (!sent.conversationId) throw new Error('new conversation id');
-  if (!sent.reply.includes('On it.')) throw new Error('canned reply');
+
+  const immediately = await port.listMessages(sent.conversationId);
+  if (immediately.at(-1)?.role !== 'user') {
+    throw new Error('the agent message should not exist yet');
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const streaming = await port.listMessages(sent.conversationId);
+  if (streaming.at(-1)?.status !== 'pending') {
+    throw new Error('reply should appear as pending so callers keep polling');
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const settled = await port.listMessages(sent.conversationId);
+  const last = settled.at(-1);
+  if (last?.status !== 'sent') throw new Error('reply should settle');
+  if (!last.body.includes('On it.')) throw new Error('canned reply');
 
   const follow = await port.send({
     agentId: fixtureAgents[1].id,
@@ -23,8 +39,11 @@ async function run() {
   if (follow.conversationId !== sent.conversationId) {
     throw new Error('should continue thread');
   }
+  await new Promise((resolve) => setTimeout(resolve, 800));
   const thread = await port.listMessages(sent.conversationId);
-  if (thread.length !== 4) throw new Error('two turns');
+  if (thread.length !== 4) {
+    throw new Error(`expected two full turns, got ${thread.length} messages`);
+  }
 
   try {
     await port.send({ agentId: fixtureAgents[0].id, prompt: '  ' });

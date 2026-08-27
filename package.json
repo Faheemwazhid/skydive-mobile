@@ -45,7 +45,8 @@
     "test:chat": "npx tsx src/chat/mockChatPort.test.ts",
     "server": "node --experimental-strip-types --no-warnings server/src/index.ts",
     "typecheck:server": "tsc -p server/tsconfig.json",
-    "test:bff": "node --experimental-strip-types --no-warnings server/test/smoke.ts"
+    "test:bff": "node --experimental-strip-types --no-warnings server/test/smoke.ts",
+    "test:poll": "npx tsx src/chat/pollUntilReply.test.ts"
   },
   "private": true
 }

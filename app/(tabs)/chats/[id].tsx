@@ -16,6 +16,7 @@ import { useAgentsRepo } from '@/src/agents/AgentsProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatPort } from '@/src/chat/ChatProvider';
 import { MarkdownText } from '@/src/chat/markdown';
+import { pollUntilReply } from '@/src/chat/pollUntilReply';
 import { resolveThreadAgent } from '@/src/chat/resolveThreadAgent';
 import { AppText, Avatar, BackButton, Screen } from '@/src/components';
 import type { Agent } from '@/src/domain/agent';
@@ -51,6 +52,7 @@ export default function ThreadScreen() {
   const insets = useSafeAreaInsets();
   const isDraft = id === 'new' || id === 'tnew';
   const scroller = useRef<ScrollView>(null);
+  const left = useRef(false);
   const [conversationId, setConversationId] = useState(
     isDraft ? undefined : id,
   );
@@ -68,6 +70,13 @@ export default function ThreadScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    left.current = false;
+    return () => {
+      left.current = true;
+    };
+  }, []);
 
   useEffect(() => {
     const fromParam = Array.isArray(agentIdParam)
@@ -102,13 +111,22 @@ export default function ThreadScreen() {
       });
       setConversationId(result.conversationId);
       if (isDraft) swap(`/chats/${result.conversationId}`);
-      setMessages(await chat.listMessages(result.conversationId));
+      await pollUntilReply({
+        chat,
+        conversationId: result.conversationId,
+        onMessages: setMessages,
+        isCancelled: () => left.current,
+      });
     } catch {
       setDraft(prompt);
     } finally {
       setSending(false);
     }
   }
+
+  const visible = messages.filter((message) => message.body.length > 0);
+  const working =
+    sending || messages.some((message) => message.status === 'pending');
 
   const canSend = draft.trim().length > 0 && !sending;
 
@@ -133,16 +151,16 @@ export default function ThreadScreen() {
           style={styles.flex}
           contentContainerStyle={[
             styles.thread,
-            messages.length === 0 && styles.threadEmpty,
+            visible.length === 0 && styles.threadEmpty,
           ]}
           onContentSizeChange={() =>
             scroller.current?.scrollToEnd({ animated: false })
           }
         >
-          {messages.length === 0 ? (
+          {visible.length === 0 && !working ? (
             <ThreadEmpty agent={agent} />
           ) : (
-            messages.map((message) => (
+            visible.map((message) => (
               <View
                 key={message.id}
                 style={[
@@ -157,7 +175,7 @@ export default function ThreadScreen() {
               </View>
             ))
           )}
-          {sending ? (
+          {working ? (
             <View style={[styles.bubble, styles.agent, styles.typing]}>
               <AppText variant="caption" tone="muted">
                 Working…

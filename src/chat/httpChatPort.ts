@@ -18,16 +18,21 @@ type MessagePayload = {
   conversationId: string;
   role: string;
   body: string;
+  status?: string;
 };
 
 function toMessage(payload: MessagePayload): Message {
   const role: MessageRole = payload.role === 'user' ? 'user' : 'agent';
+  const status =
+    payload.status === 'pending' || payload.status === 'failed'
+      ? payload.status
+      : 'sent';
   return {
     id: payload.id,
     conversationId: payload.conversationId,
     role,
     body: payload.body,
-    status: 'sent',
+    status,
   };
 }
 
@@ -50,18 +55,17 @@ export function createHttpChatPort(): ChatPort {
     async send(input) {
       const prompt = input.prompt.trim();
       if (!prompt) throw new Error('Message is required');
-      return api<{
-        conversationId: string;
-        messageId: string;
-        reply: string;
-      }>('/v1/chat/send', {
-        method: 'POST',
-        body: {
-          agentId: input.agentId,
-          conversationId: input.conversationId ?? null,
-          prompt,
+      return api<{ conversationId: string; messageId: string }>(
+        '/v1/chat/send',
+        {
+          method: 'POST',
+          body: {
+            agentId: input.agentId,
+            conversationId: input.conversationId ?? null,
+            prompt,
+          },
         },
-      });
+      );
     },
   };
 }
