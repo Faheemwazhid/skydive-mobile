@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { AppText, Avatar, Screen } from '@/src/components';
+import { AppText, Avatar, RootHeader, Screen } from '@/src/components';
 import { go } from '@/src/nav';
 import { templates } from '@/src/templates/catalog';
 import { color, radius, space } from '@/src/theme/tokens';
@@ -8,12 +8,12 @@ import { color, radius, space } from '@/src/theme/tokens';
 export default function TemplatesTab() {
 
   return (
-    <Screen padded={false}>
+    <Screen padded={false} hasHeader>
+      <RootHeader
+        title="Templates"
+        subtitle="Add an expert to your team"
+      />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <AppText variant="title">Add an expert to your team</AppText>
-        <AppText variant="body" tone="muted" style={styles.lede}>
-          Hiring uses the agent name and character. Skills are out of MVP.
-        </AppText>
         {templates.map((template) => (
           <Pressable
             key={template.id}

@@ -13,10 +13,11 @@ import {
 } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatPort } from '@/src/chat/ChatProvider';
 import { MarkdownText } from '@/src/chat/markdown';
 import { resolveThreadAgent } from '@/src/chat/resolveThreadAgent';
-import { AppText, Avatar, Screen } from '@/src/components';
+import { AppText, Avatar, BackButton, Screen } from '@/src/components';
 import type { Agent } from '@/src/domain/agent';
 import type { Message } from '@/src/domain/chat';
 import { swap } from '@/src/nav';
@@ -44,6 +45,7 @@ export default function ThreadScreen() {
   }>();
   const chat = useChatPort();
   const agents = useAgentsRepo();
+  const insets = useSafeAreaInsets();
   const isDraft = id === 'new' || id === 'tnew';
   const scroller = useRef<ScrollView>(null);
   const [conversationId, setConversationId] = useState(
@@ -106,8 +108,9 @@ export default function ThreadScreen() {
   const canSend = draft.trim().length > 0 && !sending;
 
   return (
-    <Screen padded={false}>
-      <View style={styles.header}>
+    <Screen padded={false} hasHeader>
+      <View style={[styles.header, { paddingTop: insets.top + space.sm }]}>
+        <BackButton />
         <Avatar characterId={agent?.characterId} size="sm" />
         <View style={styles.headerText}>
           <AppText variant="body">{agent?.name ?? 'Agent'}</AppText>
@@ -198,8 +201,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    paddingHorizontal: space.lg,
-    paddingVertical: space.md,
+    paddingHorizontal: space.sm,
+    paddingBottom: space.sm,
     borderBottomWidth: 1,
     borderBottomColor: color.greyLight,
     backgroundColor: color.white,

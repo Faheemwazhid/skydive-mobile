@@ -8,7 +8,13 @@ import {
 } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
-import { AppText, Avatar, Button, Screen } from '@/src/components';
+import {
+  AppText,
+  Avatar,
+  Button,
+  DetailHeader,
+  Screen,
+} from '@/src/components';
 import { go, swap } from '@/src/nav';
 import { CHARACTER_IDS } from '@/src/theme/characters';
 import { color, font, radius, space } from '@/src/theme/tokens';
@@ -36,9 +42,9 @@ export default function CreateAgentScreen() {
   }
 
   return (
-    <Screen padded={false}>
+    <Screen padded={false} hasHeader>
+      <DetailHeader title="New agent" />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <AppText variant="title">Create a new agent</AppText>
         <AppText variant="caption" tone="muted" style={styles.label}>
           Character
         </AppText>

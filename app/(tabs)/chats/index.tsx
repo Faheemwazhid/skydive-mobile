@@ -1,10 +1,17 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
 import { useChatPort } from '@/src/chat/ChatProvider';
-import { AppText, Avatar, EmptyState, Screen } from '@/src/components';
+import {
+  AppText,
+  Avatar,
+  EmptyState,
+  RootHeader,
+  Screen,
+} from '@/src/components';
 import type { Agent } from '@/src/domain/agent';
 import type { Conversation } from '@/src/domain/chat';
 import { go } from '@/src/nav';
@@ -54,16 +61,20 @@ export default function ChatsTab() {
   }
 
   return (
-    <Screen padded={false}>
-      <View style={styles.header}>
-        <AppText variant="title">Chats</AppText>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => go('/chats/new')}
-        >
-          <AppText variant="body">New</AppText>
-        </Pressable>
-      </View>
+    <Screen padded={false} hasHeader>
+      <RootHeader
+        title="Chats"
+        action={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Start a new chat"
+            onPress={() => go('/chats/new')}
+            style={styles.headerAction}
+          >
+            <Ionicons name="create-outline" size={24} color={color.greyDark} />
+          </Pressable>
+        }
+      />
       <ScrollView contentContainerStyle={styles.scroll}>
         {rows.length === 0 ? (
           <AppText variant="body" tone="muted">
@@ -93,13 +104,11 @@ export default function ChatsTab() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: space.lg,
-    paddingTop: space.md,
-    paddingBottom: space.sm,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  headerAction: {
+    width: 44,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   scroll: {
     paddingHorizontal: space.lg,

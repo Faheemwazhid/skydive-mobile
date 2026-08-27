@@ -5,7 +5,13 @@ import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
 import { useChatPort } from '@/src/chat/ChatProvider';
 import { latestConversationForAgent } from '@/src/chat/latestConversation';
-import { AppText, Avatar, Button, Screen } from '@/src/components';
+import {
+  AppText,
+  Avatar,
+  Button,
+  DetailHeader,
+  Screen,
+} from '@/src/components';
 import { go } from '@/src/nav';
 import type { Agent } from '@/src/domain/agent';
 import type { Conversation } from '@/src/domain/chat';
@@ -54,7 +60,8 @@ export default function AgentProfileScreen() {
   }
 
   return (
-    <Screen padded={false}>
+    <Screen padded={false} hasHeader>
+      <DetailHeader floating />
       <ScrollView>
         <Image
           source={require('../../../assets/world/cover.jpg')}
@@ -64,7 +71,7 @@ export default function AgentProfileScreen() {
           <View style={styles.avatarWrap}>
             <Avatar characterId={agent.characterId} size="lg" />
           </View>
-          <AppText variant="title">{agent.name}</AppText>
+          <AppText variant="display">{agent.name}</AppText>
           {agent.description ? (
             <AppText variant="body" tone="muted" style={styles.desc}>
               {agent.description}
