@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 
-import { encrypt, keyPrefix, newId, newToken, hashToken } from '../crypto.ts';
-import { queryOne } from '../db.ts';
-import { requireSession, type AppEnv } from '../session.ts';
-import { SkydiveError, validateKey } from '../skydive.ts';
+import { encrypt, keyPrefix, newId, newToken, hashToken } from '../crypto';
+import { queryOne } from '../db';
+import { requireSession, type AppEnv } from '../session';
+import { SkydiveError, validateKey } from '../skydive';
 
 const SESSION_DAYS = 30;
 

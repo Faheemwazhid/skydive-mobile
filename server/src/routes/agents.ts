@@ -5,10 +5,10 @@ import {
   CHARACTER_IDS,
   characterForAgentId,
   type CharacterId,
-} from '../../../src/domain/characters.ts';
-import { queryAll, queryOne } from '../db.ts';
-import { requireSession, workspaceKey, type AppEnv } from '../session.ts';
-import { MANAGEMENT_BASE, skydiveJson } from '../skydive.ts';
+} from '../../../src/domain/characters';
+import { queryAll, queryOne } from '../db';
+import { requireSession, workspaceKey, type AppEnv } from '../session';
+import { MANAGEMENT_BASE, skydiveJson } from '../skydive';
 
 /** Every agent this app creates runs on Luna. See ADR 0004. */
 const IN_APP_MODEL = 'openai/gpt-5.6-luna';

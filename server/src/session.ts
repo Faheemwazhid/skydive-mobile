@@ -1,7 +1,7 @@
 import type { Context, Next } from 'hono';
 
-import { decrypt, hashToken } from './crypto.ts';
-import { queryOne } from './db.ts';
+import { decrypt, hashToken } from './crypto';
+import { queryOne } from './db';
 
 export type Viewer = {
   userId: string;
