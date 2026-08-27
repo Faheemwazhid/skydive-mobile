@@ -35,7 +35,7 @@ function ThreadEmpty({ agent }: { agent: Agent | null }) {
       </AppText>
       <AppText variant="body" tone="muted" style={styles.emptyBody}>
         {agent?.description ??
-          'Ask for an outcome, not a list of steps. Replies are mocked until the backend lands.'}
+          'Ask for an outcome, not a list of steps.'}
       </AppText>
     </View>
   );
