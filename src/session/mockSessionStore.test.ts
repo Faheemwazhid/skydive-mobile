@@ -35,6 +35,11 @@ async function run() {
   await store.skipConnect();
   if (needsConnect(store.get())) throw new Error('skip should close connect');
   if (store.get().connected) throw new Error('skip is not connected');
+
+  await store.beginConnect();
+  if (!needsConnect(store.get())) {
+    throw new Error('beginConnect should reopen connect');
+  }
 }
 
 run().then(

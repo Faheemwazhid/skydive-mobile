@@ -8,6 +8,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { AgentsProvider } from '@/src/agents/AgentsProvider';
 import { Gate } from '@/src/session/Gate';
 import { SessionProvider } from '@/src/session/SessionProvider';
 import { color } from '@/src/theme/tokens';
@@ -38,15 +39,17 @@ export default function RootLayout() {
 
   return (
     <SessionProvider>
-      <StatusBar style="dark" />
-      <Gate>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: color.offWhite },
-          }}
-        />
-      </Gate>
+      <AgentsProvider>
+        <StatusBar style="dark" />
+        <Gate>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: color.offWhite },
+            }}
+          />
+        </Gate>
+      </AgentsProvider>
     </SessionProvider>
   );
 }

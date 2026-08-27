@@ -11,6 +11,7 @@ export type SessionStore = {
   logout(): Promise<void>;
   connectKey(key: string): Promise<void>;
   skipConnect(): Promise<void>;
+  beginConnect(): Promise<void>;
 };
 
 export function needsLogin(session: Session): boolean {
