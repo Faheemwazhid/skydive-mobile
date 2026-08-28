@@ -76,16 +76,23 @@ export function DetailHeader({
   );
 }
 
-export function BackButton({ floating = false }: { floating?: boolean }) {
+export function BackButton({
+  floating = false,
+  onPress,
+}: {
+  floating?: boolean;
+  onPress?: () => void;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Go back"
-      onPress={() => {
-        if (router.canGoBack()) {
-          router.back();
-        }
-      }}
+      onPress={
+        onPress ??
+        (() => {
+          if (router.canGoBack()) router.back();
+        })
+      }
       style={[styles.back, floating && styles.backFloating]}
     >
       <Ionicons name="chevron-back" size={24} color={color.greyDark} />

@@ -15,7 +15,11 @@ import { useAgentsRepo } from '@/src/agents/AgentsProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatPort } from '@/src/chat/ChatProvider';
 import { MarkdownText } from '@/src/chat/markdown';
-import { hasReplyLanded, pollUntilReply } from '@/src/chat/pollUntilReply';
+import {
+  hasReplyLanded,
+  hasReplyStarted,
+  pollUntilReply,
+} from '@/src/chat/pollUntilReply';
 import { resolveThreadAgent } from '@/src/chat/resolveThreadAgent';
 import { AppText, Avatar, BackButton, Screen } from '@/src/components';
 import type { Agent } from '@/src/domain/agent';
@@ -42,9 +46,16 @@ function ThreadEmpty({ agent }: { agent: Agent | null }) {
 }
 
 export default function ThreadScreen() {
-  const { id, agentId: agentIdParam } = useLocalSearchParams<{
+  const {
+    id,
+    agentId: agentIdParam,
+    awaiting: awaitingParam,
+    returnToAgent,
+  } = useLocalSearchParams<{
     id: string;
     agentId?: string;
+    awaiting?: string;
+    returnToAgent?: string;
   }>();
   const chat = useChatPort();
   const agents = useAgentsRepo();
@@ -60,6 +71,8 @@ export default function ThreadScreen() {
   const [draft, setDraft] = useState('');
   const [inputHeight, setInputHeight] = useState(COMPOSER_MIN_HEIGHT);
   const [sending, setSending] = useState(false);
+  const [awaitingReply, setAwaitingReply] = useState(awaitingParam === '1');
+  const previousReplyId = useRef<string | undefined>(undefined);
 
   const load = useCallback(async () => {
     if (!conversationId) return;
@@ -69,16 +82,36 @@ export default function ThreadScreen() {
     // Sending the first message of a draft navigates to the real conversation,
     // which unmounts this screen and cancels the poll that was waiting on the
     // reply. Resuming here means the reply still lands on the new screen.
-    if (loaded.length > 0 && !hasReplyLanded(loaded)) {
+    const lastSettledReply = [...loaded]
+      .reverse()
+      .find((message) => message.role === 'agent' && message.status === 'sent');
+    if (awaitingParam === '1') {
+      previousReplyId.current = lastSettledReply?.id;
+    }
+
+    const shouldResume =
+      loaded.length > 0 &&
+      (awaitingParam === '1' || !hasReplyLanded(loaded));
+    if (shouldResume) {
+      setAwaitingReply(
+        !hasReplyStarted(loaded, previousReplyId.current),
+      );
       await pollUntilReply({
         chat,
         conversationId,
-        onMessages: setMessages,
+        onMessages: (next) => {
+          setMessages(next);
+          setAwaitingReply(
+            !hasReplyStarted(next, previousReplyId.current),
+          );
+        },
         isCancelled: () => left.current,
         maxAttempts: 25,
+        previousReplyId: previousReplyId.current,
       });
+      if (!left.current) setAwaitingReply(false);
     }
-  }, [chat, conversationId]);
+  }, [awaitingParam, chat, conversationId]);
 
   useEffect(() => {
     load();
@@ -114,6 +147,10 @@ export default function ThreadScreen() {
     const prompt = draft.trim();
     if (!prompt) return;
     setSending(true);
+    setAwaitingReply(true);
+    previousReplyId.current = [...messages]
+      .reverse()
+      .find((message) => message.role === 'agent')?.id;
     setDraft('');
     setInputHeight(COMPOSER_MIN_HEIGHT);
     try {
@@ -126,30 +163,47 @@ export default function ThreadScreen() {
       // For an existing thread setConversationId is a no-op (same value), so
       // this poll is the only one running. For a draft, swap() unmounts this
       // screen and its poll with it — the new screen starts its own.
-      if (isDraft) swap(`/chats/${result.conversationId}`);
+      if (isDraft) swap(`/chats/${result.conversationId}?awaiting=1`);
       await pollUntilReply({
         chat,
         conversationId: result.conversationId,
-        onMessages: setMessages,
+        onMessages: (next) => {
+          setMessages(next);
+          setAwaitingReply(
+            !hasReplyStarted(next, previousReplyId.current),
+          );
+        },
         isCancelled: () => left.current,
+        previousReplyId: previousReplyId.current,
       });
     } catch {
       setDraft(prompt);
     } finally {
       setSending(false);
+      setAwaitingReply(false);
     }
   }
 
   const visible = messages.filter((message) => message.body.length > 0);
   const working =
-    sending || messages.some((message) => message.status === 'pending');
+    sending ||
+    awaitingReply ||
+    messages.some(
+      (message) => message.status === 'pending' && message.body.length === 0,
+    );
 
   const canSend = draft.trim().length > 0 && !sending;
 
   return (
     <Screen padded={false} hasHeader>
       <View style={[styles.header, { paddingTop: insets.top + space.sm }]}>
-        <BackButton />
+        <BackButton
+          onPress={
+            returnToAgent
+              ? () => swap(`/(tabs)/agents/${returnToAgent}`)
+              : undefined
+          }
+        />
         <Avatar characterId={agent?.characterId} size="sm" />
         <View style={styles.headerText}>
           <AppText variant="body">{agent?.name ?? 'Agent'}</AppText>
@@ -173,6 +227,9 @@ export default function ThreadScreen() {
             scroller.current?.scrollToEnd({ animated: false })
           }
         >
+          {visible.length > 0 || working ? (
+            <View style={styles.threadSpacer} />
+          ) : null}
           {visible.length === 0 && !working ? (
             <ThreadEmpty agent={agent} />
           ) : (
@@ -249,10 +306,10 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   thread: {
     flexGrow: 1,
-    justifyContent: 'flex-end',
     padding: space.lg,
     gap: space.sm,
   },
+  threadSpacer: { flex: 1 },
   threadEmpty: {
     justifyContent: 'center',
   },
