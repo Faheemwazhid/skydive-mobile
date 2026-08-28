@@ -41,6 +41,7 @@ export function RootHeader({ title, subtitle, action }: RootHeaderProps) {
 type DetailHeaderProps = {
   title?: string;
   action?: ReactNode;
+  onBack?: () => void;
   /** Transparent variant for screens with their own hero image. */
   floating?: boolean;
 };
@@ -52,6 +53,7 @@ type DetailHeaderProps = {
 export function DetailHeader({
   title,
   action,
+  onBack,
   floating = false,
 }: DetailHeaderProps) {
   const insets = useSafeAreaInsets();
@@ -63,7 +65,7 @@ export function DetailHeader({
         { paddingTop: insets.top + space.sm },
       ]}
     >
-      <BackButton floating={floating} />
+      <BackButton floating={floating} onPress={onBack} />
       {title ? (
         <AppText variant="title" numberOfLines={1} style={styles.detailTitle}>
           {title}
