@@ -65,7 +65,10 @@ export default function AgentProfileScreen() {
 
   return (
     <Screen padded={false} hasHeader>
-      <DetailHeader floating />
+      <DetailHeader
+        floating
+        onBack={() => swap('/(tabs)/agents')}
+      />
       <ScrollView>
         <Image
           source={require('../../../assets/world/cover.jpg')}
