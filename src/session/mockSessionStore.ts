@@ -1,18 +1,11 @@
-import type { Session, SessionStore } from '@/src/domain/session';
+import { anonymous, type Session, type SessionStore } from '@/src/domain/session';
 
-const initial: Session = {
-  email: null,
-  connected: false,
-  skippedConnect: false,
-};
-
-export function createMockSessionStore(
-  seed: Session = initial,
-): SessionStore {
+export function createMockSessionStore(seed: Session = anonymous): SessionStore {
   let session: Session = seed;
   const listeners = new Set<() => void>();
 
-  function emit() {
+  function set(next: Session) {
+    session = next;
     for (const listener of listeners) listener();
   }
 
@@ -26,47 +19,24 @@ export function createMockSessionStore(
         listeners.delete(listener);
       };
     },
-    async login(email) {
-      const trimmed = email.trim();
-      if (!trimmed) {
-        throw new Error('Email is required');
-      }
-      session = {
-        email: trimmed,
-        connected: false,
-        skippedConnect: false,
-      };
-      emit();
-    },
-    async logout() {
-      session = initial;
-      emit();
+    async restore() {
+      set(session.status === 'restoring' ? anonymous : session);
     },
     async connectKey(key) {
-      if (!key.trim()) {
-        throw new Error('Key is required');
-      }
-      session = {
-        ...session,
-        connected: true,
-        skippedConnect: false,
-      };
-      emit();
+      if (!key.trim()) throw new Error('Key is required');
+      set({
+        status: 'authenticated',
+        displayName: session.displayName,
+        keyPrefix: 'sky_live_mock…',
+      });
     },
-    async skipConnect() {
-      session = {
-        ...session,
-        connected: false,
-        skippedConnect: true,
-      };
-      emit();
+    async setDisplayName(name) {
+      const trimmed = name.trim();
+      if (!trimmed) throw new Error('Name is required');
+      set({ ...session, displayName: trimmed });
     },
-    async beginConnect() {
-      session = {
-        ...session,
-        skippedConnect: false,
-      };
-      emit();
+    async logout() {
+      set(anonymous);
     },
   };
 }

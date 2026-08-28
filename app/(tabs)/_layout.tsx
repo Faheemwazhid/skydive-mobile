@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { needsConnect, needsLogin } from '@/src/domain/session';
+import { needsConnect, needsName } from '@/src/domain/session';
 import { useSession } from '@/src/session/SessionProvider';
 import { color, font } from '@/src/theme/tokens';
 
@@ -41,7 +41,7 @@ function icon(name: string) {
 export default function TabsLayout() {
   const session = useSession();
   const insets = useSafeAreaInsets();
-  const hideTabBar = needsLogin(session) || needsConnect(session);
+  const hideTabBar = needsConnect(session) || needsName(session);
   const bottomPad = Math.max(insets.bottom, MIN_BOTTOM_PAD);
 
   return (

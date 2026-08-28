@@ -25,11 +25,12 @@ npm run test:bff        # set skydive_api_key to also exercise the real connect 
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/health` | liveness |
-| POST | `/v1/auth/login` | `{ email }` → `{ token }`, creates the user on first sight |
-| GET | `/v1/auth/session` | who am I, and is a workspace connected |
+| POST | `/v1/auth/connect` | `{ key, remember }` → `{ token, displayName, keyPrefix, expiresAt }`. The key is the login (ADR 0008): validated against Skydive, then its SHA-256 finds or creates the user |
+| GET | `/v1/auth/session` | who am I |
+| POST | `/v1/auth/name` | `{ name }`, our own field. Skydive has no profile endpoint |
 | POST | `/v1/auth/logout` | revokes this session |
-| POST | `/v1/auth/connect` | `{ key }`, validated against Skydive before it is stored |
-| POST | `/v1/auth/disconnect` | forgets the key |
+
+Sessions last 15 days when `remember` is true and 12 hours when it is not.
 
 The key is AES-256-GCM encrypted with a key derived from `SESSION_SECRET`. It is
 never returned to the client — `keyPrefix` is the first characters only.

@@ -14,21 +14,14 @@ import {
 } from '@/src/components';
 import type { Agent } from '@/src/domain/agent';
 import { feedCopy, type FeedItem } from '@/src/domain/feed';
-import { useSession, useSessionActions } from '@/src/session/SessionProvider';
 import { go } from '@/src/nav';
 import { color, radius, space } from '@/src/theme/tokens';
 
 export default function AgentsTab() {
-  const session = useSession();
-  const { beginConnect } = useSessionActions();
   const repo = useAgentsRepo();
   const [agents, setAgents] = useState<Agent[]>([]);
 
   const load = useCallback(() => {
-    if (!session.connected) {
-      setAgents([]);
-      return;
-    }
     let cancelled = false;
     repo.list().then((next) => {
       if (!cancelled) setAgents(next);
@@ -36,22 +29,9 @@ export default function AgentsTab() {
     return () => {
       cancelled = true;
     };
-  }, [repo, session.connected]);
+  }, [repo]);
 
   useFocusEffect(load);
-
-  if (!session.connected) {
-    return (
-      <Screen>
-        <EmptyState
-          title="Connect Skydive"
-          body="Paste an API key to see the agents in your workspace."
-          actionLabel="Connect Skydive"
-          onAction={() => beginConnect()}
-        />
-      </Screen>
-    );
-  }
 
   const feed = feedFromAgents(agents);
 
@@ -71,6 +51,14 @@ export default function AgentsTab() {
         }
       />
       <ScrollView contentContainerStyle={styles.scroll}>
+        {agents.length === 0 ? (
+          <EmptyState
+            title="No agents yet"
+            body="Hire one from Templates, or create your own."
+            actionLabel="Create an agent"
+            onAction={() => go('/agents/create')}
+          />
+        ) : null}
         <View style={styles.list}>
           {agents.map((agent) => (
             <Pressable

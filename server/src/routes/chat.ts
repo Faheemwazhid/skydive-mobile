@@ -83,12 +83,6 @@ function roleOf(role: string): 'user' | 'agent' {
 export const chatRoutes = new Hono<AppEnv>();
 
 chatRoutes.use('*', requireSession);
-chatRoutes.use('*', async (c, next) => {
-  if (!c.get('viewer').workspaceId) {
-    return c.json({ error: 'no workspace connected', code: 'not_connected' }, 409);
-  }
-  await next();
-});
 
 chatRoutes.get('/conversations', async (c) => {
   const key = await workspaceKey(c.get('viewer').userId);

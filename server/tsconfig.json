@@ -18,7 +18,8 @@
     "jsx": "react-jsx"
   },
   "include": [
-    "src/**/*.ts",
-    "../api/**/*.ts"
+    "../api/**/*.ts",
+    "../scripts/**/*.ts",
+    "src/**/*.ts"
   ]
 }
