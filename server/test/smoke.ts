@@ -213,6 +213,24 @@ async function main() {
   const afterLogout = await call('/v1/auth/session', {}, token);
   check('session is dead after logout', afterLogout.status === 401);
 
+  // Burn the per-IP budget with invalid keys, then confirm the next attempt
+  // is throttled regardless of key validity.
+  for (let i = 0; i < 4; i += 1) {
+    await call('/v1/auth/connect', {
+      method: 'POST',
+      body: JSON.stringify({ key: 'sky_live_rate_limit_probe' }),
+    });
+  }
+  const throttled = await call('/v1/auth/connect', {
+    method: 'POST',
+    body: JSON.stringify({ key: 'sky_live_rate_limit_probe' }),
+  });
+  check(
+    'connect is rate limited after repeated failures',
+    throttled.status === 429,
+    String(throttled.status),
+  );
+
   console.log(failures === 0 ? '\nbff smoke ok' : `\n${failures} failure(s)`);
   if (failures > 0) process.exit(1);
 }

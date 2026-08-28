@@ -124,6 +124,9 @@ export default function ThreadScreen() {
         prompt,
       });
       setConversationId(result.conversationId);
+      // For an existing thread setConversationId is a no-op (same value), so
+      // this poll is the only one running. For a draft, swap() unmounts this
+      // screen and its poll with it — the new screen starts its own.
       if (isDraft) swap(`/chats/${result.conversationId}`);
       await pollUntilReply({
         chat,

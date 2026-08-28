@@ -1,13 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText, Row, RootHeader, Screen, Section } from '@/src/components';
-import {
-  appearanceLabel,
-  nextAppearance,
-  type Appearance,
-} from '@/src/session/appearance';
 import { useSession, useSessionActions } from '@/src/session/SessionProvider';
 import { color, radius, space } from '@/src/theme/tokens';
 
@@ -18,7 +11,6 @@ function initial(name: string | null): string {
 export default function YouTab() {
   const session = useSession();
   const { logout } = useSessionActions();
-  const [appearance, setAppearance] = useState<Appearance>('light');
 
   return (
     <Screen padded={false} hasHeader>
@@ -57,30 +49,6 @@ export default function YouTab() {
         <Section title="Workspace">
           <Row label="Skydive" value="Connected" />
           <Row label="Key" value={session.keyPrefix ?? '—'} last />
-        </Section>
-
-        <Section title="Preferences">
-          <Row
-            label="Appearance"
-            trailing={
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Change appearance"
-                onPress={() => setAppearance(nextAppearance(appearance))}
-                style={styles.toggle}
-              >
-                <AppText variant="caption">
-                  {appearanceLabel(appearance)}
-                </AppText>
-                <Ionicons
-                  name="swap-horizontal"
-                  size={14}
-                  color={color.greyMedium}
-                />
-              </Pressable>
-            }
-            last
-          />
         </Section>
 
         <Section title="About">
@@ -124,11 +92,4 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  toggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.xs,
-    minHeight: 44,
-    paddingHorizontal: space.sm,
-  },
 });

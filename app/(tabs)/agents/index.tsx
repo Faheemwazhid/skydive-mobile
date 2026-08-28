@@ -4,7 +4,6 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
-import { feedFromAgents } from '@/src/agents/feedFromAgents';
 import {
   AppText,
   Avatar,
@@ -13,7 +12,6 @@ import {
   Screen,
 } from '@/src/components';
 import type { Agent } from '@/src/domain/agent';
-import { feedCopy, type FeedItem } from '@/src/domain/feed';
 import { go } from '@/src/nav';
 import { color, radius, space } from '@/src/theme/tokens';
 
@@ -32,8 +30,6 @@ export default function AgentsTab() {
   }, [repo]);
 
   useFocusEffect(load);
-
-  const feed = feedFromAgents(agents);
 
   return (
     <Screen padded={false} hasHeader>
@@ -77,25 +73,8 @@ export default function AgentsTab() {
             </Pressable>
           ))}
         </View>
-        <AppText variant="caption" tone="muted" style={styles.feedLabel}>
-          Activity
-        </AppText>
-        {feed.map((item) => (
-          <FeedRow key={item.id} item={item} />
-        ))}
       </ScrollView>
     </Screen>
-  );
-}
-
-function FeedRow({ item }: { item: FeedItem }) {
-  return (
-    <View style={styles.feedRow}>
-      <AppText variant="body">{feedCopy(item)}</AppText>
-      <AppText variant="caption" tone="muted">
-        {item.at}
-      </AppText>
-    </View>
   );
 }
 
@@ -126,15 +105,6 @@ const styles = StyleSheet.create({
   },
   rowText: {
     flex: 1,
-    gap: space.xs,
-  },
-  feedLabel: {
-    marginTop: space.lg,
-  },
-  feedRow: {
-    backgroundColor: color.white,
-    borderRadius: radius.md,
-    padding: space.md,
     gap: space.xs,
   },
 });
