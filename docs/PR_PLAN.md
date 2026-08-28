@@ -1,5 +1,7 @@
 # Pull request plan
 
+**Status: complete.** All 12 PRs landed by 2026-08-28. This file is history, not an active plan.
+
 One concern per PR. Merge to `main` before starting the next unless a PR is blocked on review.
 
 ## Sequence

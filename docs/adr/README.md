@@ -10,3 +10,4 @@
 | [0006](0006-visual-language.md) | Native translation of the web brand |
 | [0007](0007-bff-and-our-database.md) | A BFF and our own database |
 | [0008](0008-key-is-the-login.md) | The Skydive key is the login |
+| [0009](0009-reply-by-polling.md) | Replies arrive by polling, not the run stream |
