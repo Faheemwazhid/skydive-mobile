@@ -1,42 +1,37 @@
 # Architecture
 
-Frontend-first Expo app. A BFF and our Postgres land after the UI is real. Screens talk to ports, never to Skydive types.
-
-## Classification
-
-Feature (greenfield). Success: a reviewer logs in, connects a key, sees agents, opens a thread, sends a message.
+An Expo app on a Hono BFF. The phone carries only our session token. The BFF holds the workspace key and is the only thing that talks to Skydive.
 
 ## Boundaries
 
 ```
-Expo app (our session only)
+Expo app (our session token only)
     → Ports: AgentsRepo, ChatPort, SessionStore
-         now: in-memory fixtures
-         later: HTTP to our BFF
-    → BFF (later)
-         → Postgres (users, encrypted workspace key, our threads)
-         → https://api.skydive.com/v1   agents, keys, secrets
-         → https://www.skydive.com/api/v1/chat/send + run SSE
+         HTTP implementations in src/agents, src/chat, src/session
+    → BFF (Hono, server/src)
+         → Postgres (users, sessions, agent_characters)
+         → https://api.skydive.com/v1          agents (management)
+         → https://www.skydive.com/api/v1      chat (send, conversations)
 ```
 
-The phone never holds `sky_live_`. Connect collects it; the frontend phase does not persist it. The BFF phase encrypts it at rest and uses it only outbound.
+The phone never holds `sky_live_`. Connect posts it once over HTTPS; the BFF encrypts it at rest and uses it only outbound.
 
 ## Data shape
 
 ```
-User            id, email
-Session         our JWT later; mock boolean now
-Workspace       connected: boolean, keyPrefix?: string
+User            id, keyHash, keyCiphertext, keyPrefix, displayName?
+Session         opaque token (SHA-256 at rest), userId, expiresAt
 Agent           id, name, description?, model, url?, characterId?
 Conversation    id, agentId, title, updatedAt
 Message         id, conversationId, role: user | agent, body, status: pending | sent | failed
 Template        id, name, characterId, blurb, worksWith[], whatYouGet[]
-FeedItem        id, kind: joined | new_chat | replied, agentId, at
 ```
+
+Users and sessions live in our Postgres. Agents, conversations, and messages live in Skydive and are read through, never mirrored. `characterId` is our concept (ADR 0007).
 
 Illegal states:
 
-- A client request that includes a `sky_live_` key except Connect (and Connect does not store it on device).
+- A client request that includes a `sky_live_` key except Connect.
 - Secret values or full API keys in any GET.
 - A model picker mutating `Agent.model` from mobile.
 - Skill counts on templates.
@@ -58,21 +53,22 @@ type ChatPort = {
     agentId: string
     conversationId?: string
     prompt: string
-  }): Promise<{ conversationId: string; messageId: string; reply: string }>
+  }): Promise<{ conversationId: string; messageId: string }>
 }
 
 type SessionStore = {
-  get(): Promise<{ email: string | null; connected: boolean }>
-  login(email: string): Promise<void>
+  get(): Session
+  subscribe(listener: () => void): () => void
+  restore(): Promise<void>          // validates a remembered token with the server
+  connectKey(key: string, remember: boolean): Promise<void>
+  setDisplayName(name: string): Promise<void>
   logout(): Promise<void>
-  connectKey(key: string): Promise<void> // frontend: set connected=true if key nonempty
-  skipConnect(): Promise<void>
 }
 ```
 
-`create` on `AgentsRepo` is the only write that assigns Luna. Agents from `list` keep whatever `model` the source provided.
+The key is the login (ADR 0008). There is no email step and no skip.
 
-## Chat HTTP (verified 2026-08-27)
+## Chat transport (verified 2026-08-27)
 
 Not the agent webserver. `https://<id>.skydive.app` is the agent's hosted app; OpenAI-style paths 404.
 
@@ -82,26 +78,22 @@ Chat (what `skydive chat -p` uses):
 
 ```
 POST https://www.skydive.com/api/v1/chat/send
-{
-  agentId, conversationId: uuid | null,
-  content, attachmentIds: [], clientSurface: "cli"
-}
+{ agentId, conversationId: uuid | null, content, attachmentIds: [], clientSurface: "cli" }
+→ { runId, conversationId, messageId }   returns before the reply exists
 
-GET https://www.skydive.com/api/v1/chat/runs/{runId}/stream
-Accept: text/event-stream
+GET https://www.skydive.com/api/v1/conversations/{id}/messages?limit=100
+→ { messages[] }   poll until the reply settles
 ```
 
-Text-delta chunks assemble the reply. Persist `conversationId`, `messageId`, `runId`.
-
-This is not in public OpenAPI. Treat unknown fields as additive.
+Sends are fire-and-forget; replies arrive by polling (ADR 0009). Not in public OpenAPI; treat unknown fields as additive.
 
 ## Navigation
 
 | Route | Surface |
 |---|---|
-| `(auth)/login` | email + continue |
-| `(auth)/connect` | paste key or Skip |
-| `(tabs)/agents` | roster + feed |
+| `(auth)/connect` | paste the key, remember-me checkbox |
+| `(auth)/name` | pick a display name (once) |
+| `(tabs)/agents` | roster |
 | `(tabs)/agents/[id]` | agent profile |
 | `(tabs)/agents/create` | create sheet |
 | `(tabs)/chats` | conversation list |
@@ -109,26 +101,35 @@ This is not in public OpenAPI. Treat unknown fields as additive.
 | `(tabs)/chats/new` | agent picker |
 | `(tabs)/templates` | catalog |
 | `(tabs)/templates/[id]` | template detail |
-| `(tabs)/you` | account |
+| `(tabs)/you` | identity, workspace, logout |
 
-Detail screens are nested inside their tab's stack so the bottom nav stays
-visible. Every pushed screen has a back control.
+Detail screens are nested inside their tab's stack so the bottom nav stays visible. Every pushed screen has a back control.
 
-New chat: pick-agent sheet → empty thread. Agents / profile Message opens latest thread for that agent, or creates one.
+New chat: pick-agent sheet → empty thread. Agent profile Message opens the latest thread for that agent, or creates one.
 
-## Frontend vs BFF
+## Session lifecycle
 
-| Phase | SessionStore.connectKey | AgentsRepo.list | ChatPort.send |
-|---|---|---|---|
-| Now | nonempty key → connected fixture workspace | fixture agents in API shape | local bubble + delayed canned markdown |
-| Next | POST key to BFF; BFF validates `GET /v1/agents?limit=1` | BFF `GET /v1/agents` | BFF `chat/send` + SSE |
+1. Connect posts the key to the BFF. The BFF validates it against Skydive, stores it encrypted, and returns a session token.
+2. The token lives in localStorage (remembered, 15 days) or sessionStorage (12 hours) on web; in memory only on native.
+3. Restore asks the server to confirm a remembered token before trusting it. A rejection clears it and returns to Connect.
+4. Logout revokes the session server-side and clears local state.
 
-Screens do not change.
+`/v1/auth/connect` is rate limited: 5 attempts per 15 minutes per IP.
 
 ## Verification
 
-No complexity checker in a new Expo app. Keep functions at cyclomatic complexity ≤ 10 by inspection. Typecheck (`tsc`) and Expo start are the gates until we add tests with the first stateful PR.
+```bash
+npm run typecheck          # app
+npm run typecheck:server   # BFF
+npm test                   # 6 offline suites
+npm run test:bff           # 26 checks against the live API, needs env + real key
+npm run build:web && npm run preview   # the Vercel shape, same origin
+```
+
+No complexity linter in the repo. Keep functions at cyclomatic complexity ≤ 10 by inspection; a whole-codebase review on 2026-08-28 found none over.
+
+CI is not wired up yet. `docs/ci.yml.proposed` is ready once the repo has a token with GitHub's `workflow` scope.
 
 ## Non-goals until a later ADR
 
-BFF implementation, encrypted key vault, push, Portal, Computer, live integrations, Aeonik (Inter fallback).
+Push, Portal, Computer, live integrations, SSE streaming, Aeonik (Inter fallback).

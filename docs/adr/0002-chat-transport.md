@@ -1,6 +1,6 @@
 # ADR 0002 — Chat transport
 
-Status: accepted  
+Status: accepted (transport half amended by [ADR 0009](0009-reply-by-polling.md))
 Date: 2026-08-27
 
 ## Decision

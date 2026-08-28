@@ -6,13 +6,12 @@ Date: 2026-08-27
 ## Decision
 
 A Hono BFF holds the workspace `sky_live_` key and is the only thing that talks
-to Skydive. Our Postgres stores **four** things:
+to Skydive. Our Postgres stores **three** things:
 
 | Table | Why it is ours |
 |---|---|
-| `users` | Our auth, not Skydive's |
+| `users` | Our auth, not Skydive's (and the encrypted key, since [ADR 0008](0008-key-is-the-login.md) folded the old `workspaces` table into it) |
 | `sessions` | Our session tokens |
-| `workspaces` | The encrypted `sky_live_` key — the reason the BFF exists |
 | `agent_characters` | `characterId` is our concept; Skydive has no such field |
 
 We do **not** store conversations or messages.

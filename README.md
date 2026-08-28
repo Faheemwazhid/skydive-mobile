@@ -24,6 +24,8 @@ The app talks only to a small BFF, and the BFF is the only thing that talks to S
 
 Tick "Remember this device" and your session lasts 15 days across refreshes. Leave it off and it lasts 12 hours and dies with the tab.
 
+Connect is rate limited to 5 attempts per 15 minutes per IP, so the endpoint that validates keys cannot be used as a free key-checking oracle.
+
 That constraint drove the architecture, so it is worth reading before you review: [ADR 0005](docs/adr/0005-no-key-on-device.md), [ADR 0007](docs/adr/0007-bff-and-our-database.md), and [ADR 0008](docs/adr/0008-key-is-the-login.md).
 
 ## Run it from nothing
