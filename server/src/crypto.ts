@@ -52,8 +52,8 @@ export function decrypt(payload: string): string {
   ]).toString('utf8');
 }
 
-export function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
+export function sha256(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
 }
 
 export function newToken(): string {

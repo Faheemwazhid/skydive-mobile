@@ -42,3 +42,6 @@ yarn-error.*
 
 # Vercel
 .vercel
+
+# local dependency link for git worktrees
+/node_modules

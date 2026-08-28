@@ -61,11 +61,11 @@ export type AgentDto = {
 };
 
 async function characterOverrides(
-  workspaceId: string,
+  userId: string,
 ): Promise<Map<string, CharacterId>> {
   const rows = await queryAll<{ agent_id: string; character_id: string }>(
-    'SELECT agent_id, character_id FROM agent_characters WHERE workspace_id = $1',
-    [workspaceId],
+    'SELECT agent_id, character_id FROM agent_characters WHERE user_id = $1',
+    [userId],
   );
   const map = new Map<string, CharacterId>();
   for (const row of rows) {
@@ -92,14 +92,6 @@ export const agentRoutes = new Hono<AppEnv>();
 
 agentRoutes.use('*', requireSession);
 
-/** 409 rather than 401: the session is fine, the workspace just is not linked. */
-agentRoutes.use('*', async (c, next) => {
-  if (!c.get('viewer').workspaceId) {
-    return c.json({ error: 'no workspace connected', code: 'not_connected' }, 409);
-  }
-  await next();
-});
-
 agentRoutes.get('/', async (c) => {
   const viewer = c.get('viewer');
   const key = await workspaceKey(viewer.userId);
@@ -114,7 +106,7 @@ agentRoutes.get('/', async (c) => {
     return c.json({ error: 'unexpected response from Skydive' }, 502);
   }
 
-  const overrides = await characterOverrides(viewer.workspaceId as string);
+  const overrides = await characterOverrides(viewer.userId);
   return c.json({
     agents: parsed.data.agents.map((a) => toDto(a, overrides)),
   });
@@ -139,7 +131,7 @@ agentRoutes.get('/:id', async (c) => {
     return c.json({ error: 'unexpected response from Skydive' }, 502);
   }
 
-  const overrides = await characterOverrides(viewer.workspaceId as string);
+  const overrides = await characterOverrides(viewer.userId);
   return c.json({ agent: toDto(parsed.data.agent, overrides) });
 });
 
@@ -166,12 +158,12 @@ agentRoutes.post('/', async (c) => {
 
   // Remember the chosen character; Skydive has no field for it (ADR 0007).
   await queryOne(
-    `INSERT INTO agent_characters (workspace_id, agent_id, character_id)
+    `INSERT INTO agent_characters (user_id, agent_id, character_id)
      VALUES ($1, $2, $3)
-     ON CONFLICT (workspace_id, agent_id)
+     ON CONFLICT (user_id, agent_id)
        DO UPDATE SET character_id = EXCLUDED.character_id
      RETURNING agent_id`,
-    [viewer.workspaceId, created.data.agent.id, parsed.data.characterId],
+    [viewer.userId, created.data.agent.id, parsed.data.characterId],
   );
 
   const overrides = new Map<string, CharacterId>([

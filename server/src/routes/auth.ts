@@ -1,83 +1,50 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 
-import { encrypt, keyPrefix, newId, newToken, hashToken } from '../crypto';
+import { encrypt, keyPrefix, newId, newToken, sha256 } from '../crypto';
 import { queryOne } from '../db';
 import { requireSession, type AppEnv } from '../session';
 import { SkydiveError, validateKey } from '../skydive';
 
-const SESSION_DAYS = 30;
-
-const loginBody = z.object({
-  email: z.string().trim().min(3).max(200).email(),
-});
+const REMEMBERED_DAYS = 15;
+const SESSION_HOURS = 12;
 
 const connectBody = z.object({
   key: z.string().trim().min(1).max(400),
+  remember: z.boolean().optional(),
+});
+
+const nameBody = z.object({
+  name: z.string().trim().min(1).max(60),
 });
 
 export const authRoutes = new Hono<AppEnv>();
 
-/**
- * Sign in by email. No password: this is an assignment build, and a fake
- * password field would imply a security property we do not provide.
- */
-authRoutes.post('/login', async (c) => {
-  const parsed = loginBody.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) {
-    return c.json({ error: 'a valid email is required' }, 400);
+function expiryFor(remember: boolean): Date {
+  const ms = remember
+    ? REMEMBERED_DAYS * 86_400_000
+    : SESSION_HOURS * 3_600_000;
+  return new Date(Date.now() + ms);
+}
+
+/** A message for the key rejections a user can act on, or null to rethrow. */
+function keyRejection(err: unknown): string | null {
+  if (!(err instanceof SkydiveError)) return null;
+  if (err.code === 'unauthorized') return 'Skydive rejected that key';
+  if (err.code === 'forbidden') {
+    return 'that key cannot list agents, use an account-level key';
   }
-  const email = parsed.data.email.toLowerCase();
-
-  const user = await queryOne<{ id: string }>(
-    `INSERT INTO users (id, email) VALUES ($1, $2)
-     ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
-     RETURNING id`,
-    [newId(), email],
-  );
-  if (!user) return c.json({ error: 'could not sign in' }, 500);
-
-  const token = newToken();
-  const expires = new Date(Date.now() + SESSION_DAYS * 86_400_000);
-  await queryOne(
-    `INSERT INTO sessions (id, user_id, token_hash, expires_at)
-     VALUES ($1, $2, $3, $4) RETURNING id`,
-    [newId(), user.id, hashToken(token), expires],
-  );
-
-  return c.json({ token, email, expiresAt: expires.toISOString() }, 201);
-});
-
-authRoutes.use('/session', requireSession);
-authRoutes.use('/logout', requireSession);
-authRoutes.use('/connect', requireSession);
-authRoutes.use('/disconnect', requireSession);
-
-authRoutes.get('/session', (c) => {
-  const viewer = c.get('viewer');
-  return c.json({
-    email: viewer.email,
-    connected: viewer.workspaceId !== null,
-    keyPrefix: viewer.keyPrefix,
-  });
-});
-
-authRoutes.post('/logout', async (c) => {
-  const header = c.req.header('authorization') ?? '';
-  await queryOne('DELETE FROM sessions WHERE token_hash = $1 RETURNING id', [
-    hashToken(header.slice(7).trim()),
-  ]);
-  return c.json({ ok: true });
-});
+  return null;
+}
 
 /**
- * Store a workspace key. Validated against Skydive before it is persisted, so
- * a bad key fails here instead of surfacing as an empty roster later.
+ * The key is the login (ADR 0008). It is validated against Skydive, then its
+ * SHA-256 identifies the user; the key itself is stored only as ciphertext.
  */
 authRoutes.post('/connect', async (c) => {
   const parsed = connectBody.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: 'an API key is required' }, 400);
-  const key = parsed.data.key;
+  const { key, remember = false } = parsed.data;
 
   if (!key.startsWith('sky_live_')) {
     return c.json({ error: 'that does not look like a Skydive API key' }, 400);
@@ -86,35 +53,71 @@ authRoutes.post('/connect', async (c) => {
   try {
     await validateKey(key);
   } catch (err) {
-    if (err instanceof SkydiveError && err.code === 'unauthorized') {
-      return c.json({ error: 'Skydive rejected that key' }, 400);
-    }
-    if (err instanceof SkydiveError && err.code === 'forbidden') {
-      return c.json(
-        { error: 'that key cannot list agents — use an account-level key' },
-        400,
-      );
-    }
+    const rejection = keyRejection(err);
+    if (rejection) return c.json({ error: rejection }, 400);
     return c.json({ error: 'could not reach Skydive to check that key' }, 502);
   }
 
-  const viewer = c.get('viewer');
-  await queryOne(
-    `INSERT INTO workspaces (id, user_id, key_ciphertext, key_prefix)
+  const user = await queryOne<{ id: string; display_name: string | null }>(
+    `INSERT INTO users (id, key_hash, key_ciphertext, key_prefix)
      VALUES ($1, $2, $3, $4)
-     ON CONFLICT (user_id) DO UPDATE
+     ON CONFLICT (key_hash) DO UPDATE
        SET key_ciphertext = EXCLUDED.key_ciphertext,
            key_prefix     = EXCLUDED.key_prefix
-     RETURNING id`,
-    [newId(), viewer.userId, encrypt(key), keyPrefix(key)],
+     RETURNING id, display_name`,
+    [newId(), sha256(key), encrypt(key), keyPrefix(key)],
+  );
+  if (!user) return c.json({ error: 'could not sign in' }, 500);
+
+  const token = newToken();
+  const expires = expiryFor(remember);
+  await queryOne(
+    `INSERT INTO sessions (id, user_id, token_hash, expires_at)
+     VALUES ($1, $2, $3, $4) RETURNING id`,
+    [newId(), user.id, sha256(token), expires],
   );
 
-  return c.json({ connected: true, keyPrefix: keyPrefix(key) }, 201);
+  return c.json(
+    {
+      token,
+      displayName: user.display_name,
+      keyPrefix: keyPrefix(key),
+      expiresAt: expires.toISOString(),
+    },
+    201,
+  );
 });
 
-authRoutes.post('/disconnect', async (c) => {
-  await queryOne('DELETE FROM workspaces WHERE user_id = $1 RETURNING id', [
-    c.get('viewer').userId,
+authRoutes.use('/session', requireSession);
+authRoutes.use('/logout', requireSession);
+authRoutes.use('/name', requireSession);
+
+authRoutes.get('/session', (c) => {
+  const viewer = c.get('viewer');
+  return c.json({
+    displayName: viewer.displayName,
+    keyPrefix: viewer.keyPrefix,
+  });
+});
+
+/** Our own field. Skydive has no profile endpoint to read a name from. */
+authRoutes.post('/name', async (c) => {
+  const parsed = nameBody.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: 'a name is required' }, 400);
+
+  const updated = await queryOne<{ display_name: string }>(
+    'UPDATE users SET display_name = $1 WHERE id = $2 RETURNING display_name',
+    [parsed.data.name, c.get('viewer').userId],
+  );
+  if (!updated) return c.json({ error: 'could not save that name' }, 500);
+
+  return c.json({ displayName: updated.display_name });
+});
+
+authRoutes.post('/logout', async (c) => {
+  const header = c.req.header('authorization') ?? '';
+  await queryOne('DELETE FROM sessions WHERE token_hash = $1 RETURNING id', [
+    sha256(header.slice(7).trim()),
   ]);
-  return c.json({ connected: false });
+  return c.json({ ok: true });
 });

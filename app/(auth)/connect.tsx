@@ -1,21 +1,29 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppText, Button, Screen } from '@/src/components';
 import { useSessionActions } from '@/src/session/SessionProvider';
 import { color, font, radius, space } from '@/src/theme/tokens';
 
+const REMEMBER_LABEL = 'Remember this device for 15 days';
+
 export default function ConnectScreen() {
-  const { connectKey, skipConnect } = useSessionActions();
+  const { connectKey } = useSessionActions();
   const [key, setKey] = useState('');
+  const [remember, setRemember] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function onConnect() {
+    setError(null);
+    setBusy(true);
     try {
-      setError(null);
-      await connectKey(key);
+      await connectKey(key, remember);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not connect');
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -24,11 +32,13 @@ export default function ConnectScreen() {
       <View style={styles.hero}>
         <AppText variant="display">Connect Skydive</AppText>
         <AppText variant="body" tone="muted" style={styles.lede}>
-          Paste an account-level API key. It is not stored on this device. Skip
-          to browse empty Agents and Chats.
+          Your account-level API key is how you sign in. It is checked with
+          Skydive, encrypted on our server, and never kept on this device.
         </AppText>
       </View>
+
       <TextInput
+        accessibilityLabel="Skydive API key"
         autoCapitalize="none"
         autoCorrect={false}
         placeholder="sky_live_…"
@@ -36,19 +46,40 @@ export default function ConnectScreen() {
         secureTextEntry
         value={key}
         onChangeText={setKey}
+        onSubmitEditing={onConnect}
         style={styles.input}
       />
+
+      <Pressable
+        accessibilityRole="checkbox"
+        // Native reads accessibilityState; react-native-web only emits
+        // aria-checked when it is passed explicitly.
+        accessibilityState={{ checked: remember }}
+        aria-checked={remember}
+        accessibilityLabel={REMEMBER_LABEL}
+        onPress={() => setRemember((on) => !on)}
+        style={styles.remember}
+      >
+        <View style={[styles.box, remember && styles.boxOn]}>
+          {remember ? (
+            <Ionicons name="checkmark" size={14} color={color.white} />
+          ) : null}
+        </View>
+        <AppText variant="caption" tone="muted">
+          {REMEMBER_LABEL}
+        </AppText>
+      </Pressable>
+
       {error ? (
         <AppText variant="caption" style={styles.error}>
           {error}
         </AppText>
       ) : null}
-      <Button label="Continue" onPress={onConnect} />
+
       <Button
-        label="Skip for now"
-        variant="ghost"
-        onPress={() => skipConnect()}
-        style={styles.skip}
+        label={busy ? 'Checking…' : 'Continue'}
+        onPress={onConnect}
+        disabled={busy || key.trim().length === 0}
       />
     </Screen>
   );
@@ -75,11 +106,28 @@ const styles = StyleSheet.create({
     fontSize: font.size.body,
     color: color.greyDark,
   },
+  remember: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    marginBottom: space.md,
+  },
+  box: {
+    width: 20,
+    height: 20,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: color.greyLight,
+    backgroundColor: color.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  boxOn: {
+    backgroundColor: color.greyDark,
+    borderColor: color.greyDark,
+  },
   error: {
     color: color.accentRed,
     marginBottom: space.sm,
-  },
-  skip: {
-    marginTop: space.sm,
   },
 });

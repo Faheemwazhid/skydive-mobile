@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useSyncExternalStore,
   type ReactNode,
@@ -18,6 +19,10 @@ export function SessionProvider({
   store?: SessionStore;
   children: ReactNode;
 }) {
+  useEffect(() => {
+    void store.restore();
+  }, [store]);
+
   return (
     <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
   );
@@ -38,16 +43,14 @@ export function useSession(): Session {
 
 export function useSessionActions(): Pick<
   SessionStore,
-  'login' | 'logout' | 'connectKey' | 'skipConnect' | 'beginConnect'
+  'logout' | 'connectKey' | 'setDisplayName'
 > {
   const store = useStore();
   return useMemo(
     () => ({
-      login: store.login,
       logout: store.logout,
       connectKey: store.connectKey,
-      skipConnect: store.skipConnect,
-      beginConnect: store.beginConnect,
+      setDisplayName: store.setDisplayName,
     }),
     [store],
   );

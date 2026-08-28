@@ -5,45 +5,61 @@ import { AppText, Button, Screen } from '@/src/components';
 import { useSessionActions } from '@/src/session/SessionProvider';
 import { color, font, radius, space } from '@/src/theme/tokens';
 
-export default function LoginScreen() {
-  const { login } = useSessionActions();
-  const [email, setEmail] = useState('');
+const MAX_NAME = 60;
+
+export default function NameScreen() {
+  const { setDisplayName } = useSessionActions();
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function onContinue() {
+  async function onSave() {
+    setError(null);
+    setBusy(true);
     try {
-      setError(null);
-      await login(email);
+      await setDisplayName(name);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not sign in');
+      setError(err instanceof Error ? err.message : 'Could not save that name');
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
     <Screen>
       <View style={styles.hero}>
-        <AppText variant="display">Let&apos;s fly</AppText>
+        <AppText variant="display">What should we call you?</AppText>
         <AppText variant="body" tone="muted" style={styles.lede}>
-          Sign in to your Skydive workspace. Continue always succeeds in this
-          frontend phase.
+          Skydive knows your agents, not your name. This is ours, and it is only
+          used to label your own account.
         </AppText>
       </View>
+
       <TextInput
-        autoCapitalize="none"
+        accessibilityLabel="Your name"
+        autoCapitalize="words"
         autoCorrect={false}
-        keyboardType="email-address"
-        placeholder="you@company.com"
+        autoFocus
+        maxLength={MAX_NAME}
+        placeholder="Your name"
         placeholderTextColor={color.greyMedium}
-        value={email}
-        onChangeText={setEmail}
+        value={name}
+        onChangeText={setName}
+        onSubmitEditing={onSave}
         style={styles.input}
       />
+
       {error ? (
         <AppText variant="caption" style={styles.error}>
           {error}
         </AppText>
       ) : null}
-      <Button label="Continue" onPress={onContinue} />
+
+      <Button
+        label={busy ? 'Saving…' : 'Continue'}
+        onPress={onSave}
+        disabled={busy || name.trim().length === 0}
+      />
     </Screen>
   );
 }
@@ -55,7 +71,7 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   lede: {
-    maxWidth: 320,
+    maxWidth: 340,
   },
   input: {
     minHeight: 48,

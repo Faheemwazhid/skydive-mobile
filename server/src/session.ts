@@ -1,20 +1,18 @@
 import type { Context, Next } from 'hono';
 
-import { decrypt, hashToken } from './crypto';
+import { decrypt, sha256 } from './crypto';
 import { queryOne } from './db';
 
 export type Viewer = {
   userId: string;
-  email: string;
-  workspaceId: string | null;
-  keyPrefix: string | null;
+  displayName: string | null;
+  keyPrefix: string;
 };
 
 type SessionRow = {
   user_id: string;
-  email: string;
-  workspace_id: string | null;
-  key_prefix: string | null;
+  display_name: string | null;
+  key_prefix: string;
 };
 
 export type AppEnv = {
@@ -30,18 +28,16 @@ function bearer(c: Context): string | null {
 
 export async function viewerFor(token: string): Promise<Viewer | null> {
   const row = await queryOne<SessionRow>(
-    `SELECT s.user_id, u.email, w.id AS workspace_id, w.key_prefix
+    `SELECT s.user_id, u.display_name, u.key_prefix
        FROM sessions s
        JOIN users u ON u.id = s.user_id
-       LEFT JOIN workspaces w ON w.user_id = s.user_id
       WHERE s.token_hash = $1 AND s.expires_at > now()`,
-    [hashToken(token)],
+    [sha256(token)],
   );
   if (!row) return null;
   return {
     userId: row.user_id,
-    email: row.email,
-    workspaceId: row.workspace_id,
+    displayName: row.display_name,
     keyPrefix: row.key_prefix,
   };
 }
@@ -65,7 +61,7 @@ export async function requireSession(
  */
 export async function workspaceKey(userId: string): Promise<string | null> {
   const row = await queryOne<{ key_ciphertext: string }>(
-    'SELECT key_ciphertext FROM workspaces WHERE user_id = $1',
+    'SELECT key_ciphertext FROM users WHERE id = $1',
     [userId],
   );
   return row ? decrypt(row.key_ciphertext) : null;

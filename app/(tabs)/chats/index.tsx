@@ -5,21 +5,13 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
 import { useChatPort } from '@/src/chat/ChatProvider';
-import {
-  AppText,
-  Avatar,
-  EmptyState,
-  RootHeader,
-  Screen,
-} from '@/src/components';
+import { AppText, Avatar, RootHeader, Screen } from '@/src/components';
 import type { Agent } from '@/src/domain/agent';
 import type { Conversation } from '@/src/domain/chat';
 import { go } from '@/src/nav';
-import { useSession } from '@/src/session/SessionProvider';
 import { color, radius, space } from '@/src/theme/tokens';
 
 export default function ChatsTab() {
-  const session = useSession();
   const chat = useChatPort();
   const agents = useAgentsRepo();
   const [rows, setRows] = useState<
@@ -27,10 +19,6 @@ export default function ChatsTab() {
   >([]);
 
   const load = useCallback(async () => {
-    if (!session.connected) {
-      setRows([]);
-      return;
-    }
     const [convos, roster] = await Promise.all([
       chat.listConversations(),
       agents.list(),
@@ -41,24 +29,13 @@ export default function ChatsTab() {
         agent: roster.find((a) => a.id === conversation.agentId) ?? null,
       })),
     );
-  }, [agents, chat, session.connected]);
+  }, [agents, chat]);
 
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load]),
   );
-
-  if (!session.connected) {
-    return (
-      <Screen>
-        <EmptyState
-          title="No chats yet"
-          body="Connect Skydive from Agents to start a conversation."
-        />
-      </Screen>
-    );
-  }
 
   return (
     <Screen padded={false} hasHeader>

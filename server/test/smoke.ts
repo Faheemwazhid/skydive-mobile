@@ -10,6 +10,10 @@ const REAL_KEY = process.env.skydive_api_key ?? process.env.SKYDIVE_API_KEY;
 
 let failures = 0;
 
+function daysUntil(iso: string): number {
+  return (new Date(iso).getTime() - Date.now()) / 86_400_000;
+}
+
 function check(name: string, ok: boolean, detail = '') {
   const mark = ok ? 'ok  ' : 'FAIL';
   if (!ok) failures += 1;
@@ -39,90 +43,101 @@ async function main() {
   const health = await call('/health');
   check('health responds', health.status === 200);
 
-  const badEmail = await call('/v1/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email: 'nope' }),
-  });
-  check('rejects a malformed email', badEmail.status === 400);
-
-  const email = `smoke-${Date.now()}@example.com`;
-  const login = await call('/v1/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email }),
-  });
-  const token = login.body.token as string | undefined;
-  check('login issues a session', login.status === 201 && !!token);
-
   const noAuth = await call('/v1/auth/session');
   check('session requires a token', noAuth.status === 401);
 
   const badAuth = await call('/v1/auth/session', {}, 'not-a-real-token');
   check('rejects an unknown token', badAuth.status === 401);
 
-  const session = await call('/v1/auth/session', {}, token);
-  check(
-    'session starts disconnected',
-    session.status === 200 && session.body.connected === false,
-  );
-
-  const notAKey = await call(
-    '/v1/auth/connect',
-    { method: 'POST', body: JSON.stringify({ key: 'hunter2' }) },
-    token,
-  );
+  const notAKey = await call('/v1/auth/connect', {
+    method: 'POST',
+    body: JSON.stringify({ key: 'hunter2' }),
+  });
   check('rejects a non-Skydive key', notAKey.status === 400);
 
-  const fakeKey = await call(
-    '/v1/auth/connect',
-    { method: 'POST', body: JSON.stringify({ key: 'sky_live_totally_fake' }) },
-    token,
-  );
+  const fakeKey = await call('/v1/auth/connect', {
+    method: 'POST',
+    body: JSON.stringify({ key: 'sky_live_totally_fake' }),
+  });
   check(
     'rejects a well-formed but invalid key',
     fakeKey.status === 400,
     String(fakeKey.body.error ?? ''),
   );
 
-  if (!REAL_KEY) {
-    console.log('skip  connect with a real key — no skydive_api_key in env');
-  } else {
-    const connected = await call(
-      '/v1/auth/connect',
-      { method: 'POST', body: JSON.stringify({ key: REAL_KEY }) },
-      token,
-    );
-    check(
-      'connects with a real key',
-      connected.status === 201 && connected.body.connected === true,
-    );
+  check(
+    'there is no email login to bypass the key',
+    (await call('/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'someone@example.com' }),
+    })).status === 404,
+  );
 
-    const after = await call('/v1/auth/session', {}, token);
-    const prefix = String(after.body.keyPrefix ?? '');
-    check('session reports connected', after.body.connected === true);
+  let token: string | undefined;
+
+  if (!REAL_KEY) {
+    console.log('skip  agents — no skydive_api_key in env');
+  } else {
+    const connected = await call('/v1/auth/connect', {
+      method: 'POST',
+      body: JSON.stringify({ key: REAL_KEY, remember: true }),
+    });
+    token = connected.body.token as string | undefined;
+    const prefix = String(connected.body.keyPrefix ?? '');
+    check('the key alone signs you in', connected.status === 201 && !!token);
     check(
       'never returns the full key',
       prefix.endsWith('…') && !prefix.includes(REAL_KEY.slice(12)),
       prefix,
     );
+    check(
+      'remembered sessions last 15 days',
+      daysUntil(String(connected.body.expiresAt ?? '')) > 14,
+      `${daysUntil(String(connected.body.expiresAt ?? ''))} days`,
+    );
 
-    const disconnected = await call(
-      '/v1/auth/disconnect',
-      { method: 'POST' },
+    const brief = await call('/v1/auth/connect', {
+      method: 'POST',
+      body: JSON.stringify({ key: REAL_KEY, remember: false }),
+    });
+    check(
+      'an unremembered session expires within a day',
+      daysUntil(String(brief.body.expiresAt ?? '')) < 1,
+    );
+
+    const named = await call(
+      '/v1/auth/name',
+      { method: 'POST', body: JSON.stringify({ name: '  Waz  ' }) },
       token,
     );
-    check('disconnect clears the workspace', disconnected.status === 200);
-  }
-
-
-  if (!REAL_KEY) {
-    console.log('skip  agents — no skydive_api_key in env');
-  } else {
-    const reconnect = await call(
-      '/v1/auth/connect',
-      { method: 'POST', body: JSON.stringify({ key: REAL_KEY }) },
-      token,
+    check(
+      'display name is stored trimmed',
+      named.status === 200 && named.body.displayName === 'Waz',
+      String(named.body.displayName ?? ''),
     );
-    check('reconnect for agent checks', reconnect.status === 201);
+    check(
+      'a name is required',
+      (await call('/v1/auth/name', {
+        method: 'POST',
+        body: JSON.stringify({ name: '   ' }),
+      }, token)).status === 400,
+    );
+
+    const again = await call('/v1/auth/connect', {
+      method: 'POST',
+      body: JSON.stringify({ key: REAL_KEY, remember: true }),
+    });
+    check(
+      'the same key returns the same identity, name intact',
+      again.body.displayName === 'Waz',
+      String(again.body.displayName ?? ''),
+    );
+
+    const session = await call('/v1/auth/session', {}, token);
+    check(
+      'session reports the name and key prefix',
+      session.status === 200 && session.body.displayName === 'Waz',
+    );
 
     const list = await call('/v1/agents', {}, token);
     const agents = (list.body.agents ?? []) as Array<Record<string, unknown>>;
@@ -190,10 +205,6 @@ async function main() {
     check('reply arrives via polling and settles', settled && reply.length > 0,
       reply.slice(0, 40));
 
-    await call('/v1/auth/disconnect', { method: 'POST' }, token);
-    const gated = await call('/v1/agents', {}, token);
-    check('agents require a connected workspace', gated.status === 409,
-      String(gated.body.code ?? ''));
   }
 
   const loggedOut = await call('/v1/auth/logout', { method: 'POST' }, token);

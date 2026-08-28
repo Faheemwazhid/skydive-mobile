@@ -11,13 +11,13 @@ import {
 import { useSession, useSessionActions } from '@/src/session/SessionProvider';
 import { color, radius, space } from '@/src/theme/tokens';
 
-function initial(email: string | null): string {
-  return email?.trim()?.[0]?.toUpperCase() ?? '?';
+function initial(name: string | null): string {
+  return name?.trim()?.[0]?.toUpperCase() ?? '?';
 }
 
 export default function YouTab() {
   const session = useSession();
-  const { logout, beginConnect } = useSessionActions();
+  const { logout } = useSessionActions();
   const [appearance, setAppearance] = useState<Appearance>('light');
 
   return (
@@ -27,26 +27,26 @@ export default function YouTab() {
         <View style={styles.identity}>
           <View style={styles.avatar}>
             <AppText variant="title" tone="inverse">
-              {initial(session.email)}
+              {initial(session.displayName)}
             </AppText>
           </View>
           <View style={styles.identityText}>
             <AppText variant="body" numberOfLines={1}>
-              {session.email ?? 'Signed out'}
+              {session.displayName ?? 'Signed out'}
             </AppText>
             <View style={styles.statusRow}>
               <View
                 style={[
                   styles.dot,
                   {
-                    backgroundColor: session.connected
+                    backgroundColor: session.keyPrefix
                       ? color.accentGreen
                       : color.greyMedium,
                   },
                 ]}
               />
               <AppText variant="caption" tone="muted">
-                {session.connected
+                {session.keyPrefix
                   ? 'Workspace connected'
                   : 'No workspace connected'}
               </AppText>
@@ -55,14 +55,8 @@ export default function YouTab() {
         </View>
 
         <Section title="Workspace">
-          <Row
-            label="Skydive"
-            value={session.connected ? 'Connected' : 'Not connected'}
-            last={session.connected}
-          />
-          {!session.connected ? (
-            <Row label="Connect a workspace" onPress={beginConnect} last />
-          ) : null}
+          <Row label="Skydive" value="Connected" />
+          <Row label="Key" value={session.keyPrefix ?? '—'} last />
         </Section>
 
         <Section title="Preferences">
@@ -91,7 +85,7 @@ export default function YouTab() {
 
         <Section title="About">
           <Row label="Version" value="1.0.0 (MVP)" />
-          <Row label="Data" value="Mocked" last />
+          <Row label="Data" value="Live Skydive" last />
         </Section>
 
         <Section>
