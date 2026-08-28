@@ -12,7 +12,7 @@ import {
   DetailHeader,
   Screen,
 } from '@/src/components';
-import { go } from '@/src/nav';
+import { go, swap } from '@/src/nav';
 import type { Agent } from '@/src/domain/agent';
 import type { Conversation } from '@/src/domain/chat';
 import { color, space } from '@/src/theme/tokens';
@@ -43,10 +43,14 @@ export default function AgentProfileScreen() {
     if (!agent) return;
     const latest = await latestConversationForAgent(chat, agent.id);
     if (latest) {
-      go(`/chats/${latest.id}`);
+      swap(
+        `/(tabs)/chats/${latest.id}?returnToAgent=${agent.id}`,
+      );
       return;
     }
-    go(`/chats/tnew?agentId=${agent.id}`);
+    swap(
+      `/(tabs)/chats/tnew?agentId=${agent.id}&returnToAgent=${agent.id}`,
+    );
   }
 
   if (!agent) {
@@ -93,7 +97,11 @@ export default function AgentProfileScreen() {
               <Pressable
                 key={convo.id}
                 accessibilityRole="button"
-                onPress={() => go(`/chats/${convo.id}`)}
+                onPress={() =>
+                  swap(
+                    `/(tabs)/chats/${convo.id}?returnToAgent=${agent.id}`,
+                  )
+                }
                 style={styles.chatRow}
               >
                 <AppText variant="body">{convo.title}</AppText>

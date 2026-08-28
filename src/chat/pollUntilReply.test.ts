@@ -1,5 +1,9 @@
 import type { ChatPort, Message } from '@/src/domain/chat';
-import { hasReplyLanded, pollUntilReply } from '@/src/chat/pollUntilReply';
+import {
+  hasReplyLanded,
+  hasReplyStarted,
+  pollUntilReply,
+} from '@/src/chat/pollUntilReply';
 
 function user(): Message {
   return {
@@ -11,12 +15,16 @@ function user(): Message {
   };
 }
 
-function agent(status: Message['status'], body = 'hi there'): Message {
+function agent(
+  status: Message['status'],
+  body = 'hi there',
+  id = 'a1',
+): Message {
   return {
-    id: 'a1',
+    id,
     conversationId: 'c1',
     role: 'agent',
-    body: status === 'pending' ? '' : body,
+    body,
     status,
   };
 }
@@ -44,17 +52,32 @@ async function run() {
   if (hasReplyLanded([user()])) {
     throw new Error('a lone user message must not count as a landed reply');
   }
-  if (hasReplyLanded([user(), agent('pending')])) {
+  if (hasReplyLanded([user(), agent('pending', '')])) {
     throw new Error('a streaming reply must not count as landed');
   }
   if (!hasReplyLanded([user(), agent('sent')])) {
     throw new Error('a settled agent reply should count as landed');
   }
+  if (hasReplyStarted([user(), agent('pending', '')])) {
+    throw new Error('an empty streaming reply has not visibly started');
+  }
+  if (!hasReplyStarted([user(), agent('pending', 'partial')])) {
+    throw new Error('visible streaming text should count as started');
+  }
+
+  // A prior completed agent message must not end polling for the new send.
+  const prior = agent('sent', 'old reply', 'old-agent');
+  if (hasReplyLanded([prior, user()], prior.id)) {
+    throw new Error('a previous reply must not settle the new send');
+  }
+  if (!hasReplyLanded([prior, user(), agent('sent')], prior.id)) {
+    throw new Error('a new settled reply should end polling');
+  }
 
   // Real observed sequence: user only, then streaming, then complete.
   const live = portReturning([
     [user()],
-    [user(), agent('pending')],
+    [user(), agent('pending', '')],
     [user(), agent('sent')],
   ]);
   await pollUntilReply({
@@ -65,6 +88,22 @@ async function run() {
   });
   if (live.reads() !== 3) {
     throw new Error(`expected 3 reads through the real sequence, got ${live.reads()}`);
+  }
+
+  const afterPreviousReply = portReturning([
+    [prior, user()],
+    [prior, user(), agent('pending', 'partial')],
+    [prior, user(), agent('sent')],
+  ]);
+  await pollUntilReply({
+    chat: afterPreviousReply.port,
+    conversationId: 'c1',
+    onMessages: () => undefined,
+    intervalMs: 1,
+    previousReplyId: prior.id,
+  });
+  if (afterPreviousReply.reads() !== 3) {
+    throw new Error('polling should wait for the new reply after an old one');
   }
 
   // Gives up rather than spinning forever.

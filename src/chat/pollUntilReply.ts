@@ -11,10 +11,30 @@ const MAX_ATTEMPTS = 50;
  * has not been created yet, which looks identical to "finished". The reply is
  * done when the newest message is the agent's and it has settled.
  */
-export function hasReplyLanded(messages: Message[]): boolean {
+export function hasReplyStarted(
+  messages: Message[],
+  previousReplyId?: string,
+): boolean {
+  const last = messages[messages.length - 1];
+  return (
+    last?.role === 'agent' &&
+    last.id !== previousReplyId &&
+    last.body.length > 0
+  );
+}
+
+export function hasReplyLanded(
+  messages: Message[],
+  previousReplyId?: string,
+): boolean {
   const last = messages[messages.length - 1];
   if (!last) return false;
-  return last.role === 'agent' && last.status === 'sent' && last.body.length > 0;
+  return (
+    last.role === 'agent' &&
+    last.id !== previousReplyId &&
+    last.status === 'sent' &&
+    last.body.length > 0
+  );
 }
 
 /**
@@ -28,6 +48,7 @@ export async function pollUntilReply(input: {
   isCancelled?: () => boolean;
   intervalMs?: number;
   maxAttempts?: number;
+  previousReplyId?: string;
 }): Promise<void> {
   const interval = input.intervalMs ?? INTERVAL_MS;
   const attempts = input.maxAttempts ?? MAX_ATTEMPTS;
@@ -39,7 +60,7 @@ export async function pollUntilReply(input: {
     if (input.isCancelled?.()) return;
 
     input.onMessages(messages);
-    if (hasReplyLanded(messages)) return;
+    if (hasReplyLanded(messages, input.previousReplyId)) return;
 
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
