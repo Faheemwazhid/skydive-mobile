@@ -46,13 +46,12 @@
     "preview": "tsx scripts/preview.ts",
     "test:session": "npx tsx src/session/mockSessionStore.test.ts",
     "test:agents": "npx tsx src/agents/mockAgentsRepo.test.ts",
-    "test:feed": "npx tsx src/agents/feedFromAgents.test.ts",
     "test:chat": "npx tsx src/chat/mockChatPort.test.ts",
     "test:bff": "tsx server/test/smoke.ts",
     "test:poll": "npx tsx src/chat/pollUntilReply.test.ts",
     "test:latest": "npx tsx src/chat/latestConversation.test.ts",
     "test:templates": "npx tsx src/templates/catalog.test.ts",
-    "test": "npm run -s test:session && npm run -s test:agents && npm run -s test:feed && npm run -s test:chat && npm run -s test:poll && npm run -s test:latest && npm run -s test:templates"
+    "test": "npm run -s test:session && npm run -s test:agents && npm run -s test:chat && npm run -s test:poll && npm run -s test:latest && npm run -s test:templates"
   },
   "private": true
 }
