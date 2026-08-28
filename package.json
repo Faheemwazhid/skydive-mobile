@@ -42,7 +42,7 @@
     "typecheck": "tsc --noEmit",
     "server": "tsx server/src/index.ts",
     "typecheck:server": "tsc -p server/tsconfig.json",
-    "build:web": "EXPO_PUBLIC_BFF_URL=/api expo export --platform web --output-dir dist",
+    "build:web": "EXPO_PUBLIC_BFF_URL=/api expo export --platform web --output-dir dist --clear",
     "preview": "tsx scripts/preview.ts",
     "test:session": "npx tsx src/session/mockSessionStore.test.ts",
     "test:agents": "npx tsx src/agents/mockAgentsRepo.test.ts",

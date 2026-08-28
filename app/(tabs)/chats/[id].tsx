@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -201,17 +200,6 @@ export default function ThreadScreen() {
           ) : null}
         </ScrollView>
         <View style={styles.composer}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Add attachment"
-            hitSlop={8}
-            onPress={() =>
-              Alert.alert('Attachments', 'Coming with the backend.')
-            }
-            style={styles.iconButton}
-          >
-            <Ionicons name="add" size={22} color={color.greyMedium} />
-          </Pressable>
           <TextInput
             value={draft}
             onChangeText={setDraft}
@@ -307,13 +295,6 @@ const styles = StyleSheet.create({
     backgroundColor: color.white,
     borderTopWidth: 1,
     borderTopColor: color.greyLight,
-  },
-  iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   input: {
     flex: 1,
