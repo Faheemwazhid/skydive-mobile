@@ -4,6 +4,17 @@ An Expo client for Skydive, iOS and Android. Paste a workspace API key and you a
 
 It is a native translation of the Skydive web app, not a desktop layout squeezed into a phone. Four tabs: Agents, Chats, Templates, You.
 
+<p>
+  <img src="docs/screenshots/connect.png" width="180" alt="Connect screen" />
+  <img src="docs/screenshots/agents.png" width="180" alt="Agents roster" />
+  <img src="docs/screenshots/chats.png" width="180" alt="Chats list" />
+  <img src="docs/screenshots/thread.png" width="180" alt="Chat thread" />
+  <img src="docs/screenshots/create.png" width="180" alt="Create agent sheet" />
+  <img src="docs/screenshots/templates.png" width="180" alt="Templates catalog" />
+</p>
+
+All shots are the real app against the live Skydive API: real roster, real conversations, real replies. Try it at [skydive-mobile-olive.vercel.app](https://skydive-mobile-olive.vercel.app) with your own account-level key.
+
 ## What actually works today
 
 Everything below runs against the live Skydive API, not fixtures.
