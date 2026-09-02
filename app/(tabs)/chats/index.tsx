@@ -1,40 +1,50 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
 import { useChatPort } from '@/src/chat/ChatProvider';
-import { AppText, Avatar, RootHeader, Screen } from '@/src/components';
-import type { Agent } from '@/src/domain/agent';
-import type { Conversation } from '@/src/domain/chat';
+import {
+  AppText,
+  Avatar,
+  EmptyState,
+  LoadError,
+  Loading,
+  RootHeader,
+  Screen,
+} from '@/src/components';
+import { useLoad } from '@/src/hooks/useLoad';
 import { go } from '@/src/nav';
 import { color, radius, space } from '@/src/theme/tokens';
 
 export default function ChatsTab() {
   const chat = useChatPort();
   const agents = useAgentsRepo();
-  const [rows, setRows] = useState<
-    { conversation: Conversation; agent: Agent | null }[]
-  >([]);
-
-  const load = useCallback(async () => {
-    const [convos, roster] = await Promise.all([
-      chat.listConversations(),
-      agents.list(),
-    ]);
-    setRows(
-      convos.map((conversation) => ({
+  const list = useLoad(
+    useCallback(async () => {
+      const [convos, roster] = await Promise.all([
+        chat.listConversations(),
+        agents.list(),
+      ]);
+      return convos.map((conversation) => ({
         conversation,
         agent: roster.find((a) => a.id === conversation.agentId) ?? null,
-      })),
-    );
-  }, [agents, chat]);
+      }));
+    }, [agents, chat]),
+    'Could not load your chats.',
+  );
+  const rows = list.data ?? [];
 
+  const first = useRef(true);
   useFocusEffect(
     useCallback(() => {
-      load();
-    }, [load]),
+      if (first.current) {
+        first.current = false;
+        return;
+      }
+      list.reload();
+    }, [list.reload]),
   );
 
   return (
@@ -53,10 +63,17 @@ export default function ChatsTab() {
         }
       />
       <ScrollView contentContainerStyle={styles.scroll}>
-        {rows.length === 0 ? (
-          <AppText variant="body" tone="muted">
-            No conversations yet.
-          </AppText>
+        {list.status === 'loading' ? <Loading /> : null}
+        {list.status === 'error' ? (
+          <LoadError message={list.error} onRetry={list.reload} />
+        ) : null}
+        {list.status === 'ready' && rows.length === 0 ? (
+          <EmptyState
+            title="No chats yet"
+            body="Pick an agent and say hello."
+            actionLabel="New chat"
+            onAction={() => go('/chats/new')}
+          />
         ) : (
           rows.map(({ conversation, agent }) => (
             <Pressable

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
@@ -8,28 +8,34 @@ import {
   AppText,
   Avatar,
   EmptyState,
+  LoadError,
+  Loading,
   RootHeader,
   Screen,
 } from '@/src/components';
-import type { Agent } from '@/src/domain/agent';
+import { useLoad } from '@/src/hooks/useLoad';
 import { go } from '@/src/nav';
 import { color, radius, space } from '@/src/theme/tokens';
 
 export default function AgentsTab() {
   const repo = useAgentsRepo();
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const roster = useLoad(
+    useCallback(() => repo.list(), [repo]),
+    'Could not load your agents.',
+  );
+  const agents = roster.data ?? [];
 
-  const load = useCallback(() => {
-    let cancelled = false;
-    repo.list().then((next) => {
-      if (!cancelled) setAgents(next);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [repo]);
-
-  useFocusEffect(load);
+  // useLoad fetches on mount; refresh again when the tab regains focus.
+  const first = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (first.current) {
+        first.current = false;
+        return;
+      }
+      roster.reload();
+    }, [roster.reload]),
+  );
 
   return (
     <Screen padded={false} hasHeader>
@@ -47,7 +53,11 @@ export default function AgentsTab() {
         }
       />
       <ScrollView contentContainerStyle={styles.scroll}>
-        {agents.length === 0 ? (
+        {roster.status === 'loading' ? <Loading /> : null}
+        {roster.status === 'error' ? (
+          <LoadError message={roster.error} onRetry={roster.reload} />
+        ) : null}
+        {roster.status === 'ready' && agents.length === 0 ? (
           <EmptyState
             title="No agents yet"
             body="Hire one from Templates, or create your own."

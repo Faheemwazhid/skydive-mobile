@@ -24,6 +24,7 @@ import { resolveThreadAgent } from '@/src/chat/resolveThreadAgent';
 import { AppText, Avatar, BackButton, Screen } from '@/src/components';
 import type { Agent } from '@/src/domain/agent';
 import type { Message } from '@/src/domain/chat';
+import { messageOf } from '@/src/hooks/useLoad';
 import { swap } from '@/src/nav';
 import { color, font, radius, space } from '@/src/theme/tokens';
 
@@ -72,11 +73,23 @@ export default function ThreadScreen() {
   const [inputHeight, setInputHeight] = useState(COMPOSER_MIN_HEIGHT);
   const [sending, setSending] = useState(false);
   const [awaitingReply, setAwaitingReply] = useState(awaitingParam === '1');
+  const [error, setError] = useState<string | null>(null);
   const previousReplyId = useRef<string | undefined>(undefined);
 
   const load = useCallback(async () => {
     if (!conversationId) return;
-    const loaded = await chat.listMessages(conversationId);
+    let loaded: Message[];
+    try {
+      loaded = await chat.listMessages(conversationId);
+    } catch (err) {
+      if (!left.current) {
+        setError(messageOf(err, 'Could not load this chat.'));
+        setAwaitingReply(false);
+      }
+      return;
+    }
+    if (left.current) return;
+    setError(null);
     setMessages(loaded);
 
     // Sending the first message of a draft navigates to the real conversation,
@@ -148,6 +161,7 @@ export default function ThreadScreen() {
     if (!prompt) return;
     setSending(true);
     setAwaitingReply(true);
+    setError(null);
     previousReplyId.current = [...messages]
       .reverse()
       .find((message) => message.role === 'agent')?.id;
@@ -176,8 +190,9 @@ export default function ThreadScreen() {
         isCancelled: () => left.current,
         previousReplyId: previousReplyId.current,
       });
-    } catch {
+    } catch (err) {
       setDraft(prompt);
+      if (!left.current) setError(messageOf(err, 'Could not send. Try again.'));
     } finally {
       setSending(false);
       setAwaitingReply(false);
@@ -256,6 +271,20 @@ export default function ThreadScreen() {
             </View>
           ) : null}
         </ScrollView>
+        {error ? (
+          <View style={styles.errorBar} accessibilityRole="alert">
+            <AppText variant="caption" style={styles.errorText}>
+              {error}
+            </AppText>
+            {conversationId && visible.length === 0 ? (
+              <Pressable accessibilityRole="button" onPress={load}>
+                <AppText variant="caption" style={styles.retry}>
+                  Retry
+                </AppText>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
         <View style={styles.composer}>
           <TextInput
             value={draft}
@@ -343,6 +372,19 @@ const styles = StyleSheet.create({
   typing: {
     paddingVertical: space.sm,
   },
+  errorBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.sm,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    backgroundColor: color.white,
+    borderTopWidth: 1,
+    borderTopColor: color.greyLight,
+  },
+  errorText: { color: color.accentRed, flex: 1 },
+  retry: { fontFamily: font.familyMedium, color: color.greyDark },
   composer: {
     flexDirection: 'row',
     alignItems: 'flex-end',

@@ -51,7 +51,8 @@
     "test:poll": "npx tsx src/chat/pollUntilReply.test.ts",
     "test:latest": "npx tsx src/chat/latestConversation.test.ts",
     "test:templates": "npx tsx src/templates/catalog.test.ts",
-    "test": "npm run -s test:session && npm run -s test:agents && npm run -s test:chat && npm run -s test:poll && npm run -s test:latest && npm run -s test:templates"
+    "test:markdown": "npx tsx src/chat/markdownParse.test.ts",
+    "test": "npm run -s test:session && npm run -s test:agents && npm run -s test:chat && npm run -s test:poll && npm run -s test:latest && npm run -s test:templates && npm run -s test:markdown"
   },
   "private": true
 }

@@ -61,11 +61,15 @@ export function createApp(basePath = '') {
 /**
  * Serverless invocations are cold and concurrent, so the schema call must be
  * safe to run repeatedly and only once per instance. It is CREATE TABLE IF NOT
- * EXISTS throughout, so a lost race is harmless.
+ * EXISTS throughout, so a lost race is harmless. A failed attempt is not
+ * cached: the next request retries instead of the instance failing forever.
  */
 let migrated: Promise<void> | null = null;
 
 export function ensureSchema(): Promise<void> {
-  migrated ??= migrate();
+  migrated ??= migrate().catch((err: unknown) => {
+    migrated = null;
+    throw err;
+  });
   return migrated;
 }
