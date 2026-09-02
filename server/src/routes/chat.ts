@@ -75,6 +75,25 @@ function bodyOf(
     .trim();
 }
 
+/**
+ * Skydive runs a nightly "Dreaming" pass per agent and records it as an
+ * ordinary conversation; the API exposes nothing that marks it as system
+ * generated. A human never posts into one, so it keeps its creation timestamp
+ * as its update timestamp. Both conditions together avoid hiding a chat a
+ * user happened to name Dreaming.
+ */
+export function isSystemConversation(item: {
+  title?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}): boolean {
+  return (
+    item.title?.trim() === 'Dreaming' &&
+    !!item.createdAt &&
+    item.createdAt === item.updatedAt
+  );
+}
+
 /** Skydive says `assistant`; our domain says `agent`. */
 function roleOf(role: string): 'user' | 'agent' {
   return role === 'user' ? 'user' : 'agent';
@@ -96,7 +115,7 @@ chatRoutes.get('/conversations', async (c) => {
 
   return c.json({
     conversations: parsed.data.conversations
-      .filter((item) => item.agent?.id)
+      .filter((item) => item.agent?.id && !isSystemConversation(item))
       .map((item) => ({
         id: item.id,
         agentId: item.agent?.id as string,
