@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
@@ -10,55 +10,66 @@ import {
   Avatar,
   Button,
   DetailHeader,
+  LoadError,
+  Loading,
   Screen,
 } from '@/src/components';
-import { go, swap } from '@/src/nav';
-import type { Agent } from '@/src/domain/agent';
-import type { Conversation } from '@/src/domain/chat';
+import { useLoad } from '@/src/hooks/useLoad';
+import { swap } from '@/src/nav';
 import { color, space } from '@/src/theme/tokens';
 
 export default function AgentProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const agents = useAgentsRepo();
   const chat = useChatPort();
-  const [agent, setAgent] = useState<Agent | null>(null);
-  const [chats, setChats] = useState<Conversation[]>([]);
+  const [messageError, setMessageError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    (async () => {
-      const found = await agents.get(id);
-      const convos = await chat.listConversations();
-      if (cancelled) return;
-      setAgent(found);
-      setChats(convos.filter((c) => c.agentId === id));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [agents, chat, id]);
+  const profile = useLoad(
+    useCallback(async () => {
+      if (!id) return { agent: null, chats: [] };
+      const [found, convos] = await Promise.all([
+        agents.get(id),
+        chat.listConversations(),
+      ]);
+      return { agent: found, chats: convos.filter((c) => c.agentId === id) };
+    }, [agents, chat, id]),
+    'Could not load this agent.',
+  );
 
   async function onMessage() {
     if (!agent) return;
-    const latest = await latestConversationForAgent(chat, agent.id);
-    if (latest) {
-      swap(
-        `/(tabs)/chats/${latest.id}?returnToAgent=${agent.id}`,
-      );
-      return;
+    setMessageError(null);
+    try {
+      const latest = await latestConversationForAgent(chat, agent.id);
+      if (latest) {
+        swap(`/(tabs)/chats/${latest.id}?returnToAgent=${agent.id}`);
+        return;
+      }
+      swap(`/(tabs)/chats/tnew?agentId=${agent.id}&returnToAgent=${agent.id}`);
+    } catch {
+      setMessageError('Could not open a chat. Try again.');
     }
-    swap(
-      `/(tabs)/chats/tnew?agentId=${agent.id}&returnToAgent=${agent.id}`,
+  }
+
+  if (profile.status !== 'ready') {
+    return (
+      <Screen padded={false} hasHeader>
+        <DetailHeader onBack={() => swap('/(tabs)/agents')} />
+        {profile.status === 'loading' ? (
+          <Loading />
+        ) : (
+          <LoadError message={profile.error} onRetry={profile.reload} />
+        )}
+      </Screen>
     );
   }
 
+  const { agent, chats } = profile.data;
   if (!agent) {
     return (
-      <Screen>
-        <AppText variant="body" tone="muted">
-          Agent not found.
-        </AppText>
+      <Screen padded={false} hasHeader>
+        <DetailHeader onBack={() => swap('/(tabs)/agents')} />
+        <LoadError message="Agent not found." />
       </Screen>
     );
   }
@@ -88,6 +99,11 @@ export default function AgentProfileScreen() {
             {agent.model}
           </AppText>
           <Button label="Message" onPress={onMessage} style={styles.message} />
+          {messageError ? (
+            <AppText variant="caption" style={styles.error}>
+              {messageError}
+            </AppText>
+          ) : null}
           <AppText variant="caption" tone="muted" style={styles.chatsLabel}>
             Chats
           </AppText>
@@ -138,6 +154,10 @@ const styles = StyleSheet.create({
   },
   message: {
     marginTop: space.lg,
+  },
+  error: {
+    color: color.accentRed,
+    marginTop: space.sm,
   },
   chatsLabel: {
     marginTop: space.lg,

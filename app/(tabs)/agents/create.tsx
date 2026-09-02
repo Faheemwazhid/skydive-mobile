@@ -86,9 +86,9 @@ export default function CreateAgentScreen() {
           </AppText>
         ) : null}
         <Button
-          label="Get started"
+          label={busy ? 'Creating…' : 'Get started'}
           onPress={onCreate}
-          disabled={busy}
+          disabled={busy || name.trim().length === 0}
         />
         <Pressable
           accessibilityRole="button"

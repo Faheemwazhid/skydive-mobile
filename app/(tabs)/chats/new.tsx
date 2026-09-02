@@ -1,24 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useAgentsRepo } from '@/src/agents/AgentsProvider';
-import { AppText, Avatar, DetailHeader, Screen } from '@/src/components';
+import {
+  AppText,
+  Avatar,
+  DetailHeader,
+  LoadError,
+  Loading,
+  Screen,
+} from '@/src/components';
+import { useLoad } from '@/src/hooks/useLoad';
 import { swap } from '@/src/nav';
-import type { Agent } from '@/src/domain/agent';
 import { color, radius, space } from '@/src/theme/tokens';
 
 export default function NewChatScreen() {
   const repo = useAgentsRepo();
-  const [agents, setAgents] = useState<Agent[]>([]);
-
-  useEffect(() => {
-    repo.list().then(setAgents);
-  }, [repo]);
+  const roster = useLoad(
+    useCallback(() => repo.list(), [repo]),
+    'Could not load your agents.',
+  );
+  const agents = roster.data ?? [];
 
   return (
     <Screen padded={false} hasHeader>
       <DetailHeader title="New chat" />
       <ScrollView contentContainerStyle={styles.list}>
+        {roster.status === 'loading' ? <Loading /> : null}
+        {roster.status === 'error' ? (
+          <LoadError message={roster.error} onRetry={roster.reload} />
+        ) : null}
         {agents.map((agent) => (
           <Pressable
             key={agent.id}
@@ -41,7 +52,6 @@ export default function NewChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  lede: { marginTop: space.sm, marginBottom: space.md },
   list: {
     gap: space.sm,
     paddingHorizontal: space.lg,

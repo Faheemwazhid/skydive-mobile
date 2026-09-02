@@ -5,6 +5,25 @@
 import { readToken } from '@/src/api/tokenStore';
 
 const DEFAULT_BASE = 'http://localhost:8787';
+const TIMEOUT_MS = 20_000;
+
+/** Codes for which the session is unrecoverable and the user must reconnect. */
+export function isSessionLost(err: unknown): boolean {
+  return (
+    err instanceof ApiError &&
+    (err.status === 401 || err.code === 'key_invalid')
+  );
+}
+
+let onSessionLost: (() => void) | null = null;
+
+/**
+ * The session store registers here so a 401 or a revoked key from any request
+ * signs the user out instead of leaving every screen empty.
+ */
+export function setSessionLostHandler(handler: (() => void) | null): void {
+  onSessionLost = handler;
+}
 
 export function baseUrl(): string {
   return process.env.EXPO_PUBLIC_BFF_URL ?? DEFAULT_BASE;
@@ -47,6 +66,7 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
       method: options.method ?? 'GET',
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {
     throw new ApiError(0, 'Could not reach the server');
@@ -57,11 +77,13 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
 
   if (!res.ok) {
     const record = (parsed ?? {}) as { error?: unknown; code?: unknown };
-    throw new ApiError(
+    const error = new ApiError(
       res.status,
       typeof record.error === 'string' ? record.error : `Request failed (${res.status})`,
       typeof record.code === 'string' ? record.code : null,
     );
+    if (!options.anonymous && isSessionLost(error)) onSessionLost?.();
+    throw error;
   }
   return parsed as T;
 }

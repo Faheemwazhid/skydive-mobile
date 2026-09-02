@@ -9,18 +9,23 @@ import {
 const ALGO = 'aes-256-gcm';
 const IV_BYTES = 12;
 
+let derived: Buffer | null = null;
+
 /**
- * Derives the encryption key from SESSION_SECRET. Fails loudly at startup
- * rather than silently encrypting with a default nobody rotated.
+ * Derives the encryption key from SESSION_SECRET, once per process. scrypt is
+ * deliberately slow, and the key is decrypted on every authenticated request.
+ * Fails loudly rather than silently encrypting with a default nobody rotated.
  */
 function masterKey(): Buffer {
+  if (derived) return derived;
   const secret = process.env.SESSION_SECRET;
   if (!secret || secret.length < 16) {
     throw new Error(
       'SESSION_SECRET must be set to at least 16 characters. See server/README.md',
     );
   }
-  return scryptSync(secret, 'skydive-mobile-key-vault', 32);
+  derived = scryptSync(secret, 'skydive-mobile-key-vault', 32);
+  return derived;
 }
 
 /** AES-256-GCM. Returns iv.tag.ciphertext, base64url, colon-separated. */

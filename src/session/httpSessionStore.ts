@@ -1,4 +1,10 @@
-import { api, ApiError, getToken, setToken } from '@/src/api/client';
+import {
+  api,
+  ApiError,
+  getToken,
+  setSessionLostHandler,
+  setToken,
+} from '@/src/api/client';
 import { anonymous, type Session, type SessionStore } from '@/src/domain/session';
 
 type ConnectResponse = {
@@ -23,6 +29,13 @@ export function createHttpSessionStore(): SessionStore {
     session = next;
     for (const listener of listeners) listener();
   };
+
+  // A revoked key or expired session anywhere in the app ends it here.
+  setSessionLostHandler(() => {
+    if (session.status !== 'authenticated') return;
+    setToken(null);
+    setSession(anonymous);
+  });
 
   const signedIn = (from: SessionResponse): Session => ({
     status: 'authenticated',
